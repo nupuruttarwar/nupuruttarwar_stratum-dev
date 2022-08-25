@@ -1,8 +1,10 @@
 // Copyright 2019-present Barefoot Networks, Inc.
-// Copyright 2022 Intel Corporation
+// Copyright 2022 Intel Corporation.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "stratum/hal/lib/barefoot/bf_chassis_manager.h"
+// adapted from bf_chassis_manager_test.cc
+
+#include "stratum/hal/lib/ipdk/ipdk_chassis_manager.h"
 
 #include <string>
 #include <utility>
@@ -17,19 +19,36 @@
 #include "stratum/glue/status/status.h"
 #include "stratum/glue/status/status_test_util.h"
 #include "stratum/glue/status/statusor.h"
-#include "stratum/hal/lib/barefoot/bf_sde_mock.h"
 #include "stratum/hal/lib/common/common.pb.h"
 #include "stratum/hal/lib/common/phal_mock.h"
 #include "stratum/hal/lib/common/writer_mock.h"
+#include "stratum/hal/lib/tdi/tdi_sde_mock.h"
 #include "stratum/lib/constants.h"
 #include "stratum/lib/test_utils/matchers.h"
 #include "stratum/lib/utils.h"
+
+#undef IPU_ADD_NEW_PORT
+
+#if !defined(IPU_ADD_NEW_PORT)
+  #define EXPECT_ADD_PORT_CALL(unit, port, speed, fec_mode)
+  #define EXPECT_ENABLE_PORT_CALL(unit, port)
+#elif !defined(TOFINO_TARGET)
+  #define EXPECT_ADD_PORT_CALL(unit, port, speed, fec_mode) \
+    EXPECT_CALL(*bf_sde_mock_, AddPort((unit), (port), (speed), _, (fec_mode)))
+  #define EXPECT_ENABLE_PORT_CALL(unit, port) \
+    EXPECT_CALL(*bf_sde_mock_, EnablePort(unit, port))
+#else
+  #define EXPECT_ADD_PORT_CALL(unit, port, speed, fec_mode) \
+    EXPECT_CALL(*bf_sde_mock_, AddPort((unit), (port), (speed), (fec_mode)))
+  #define EXPECT_ENABLE_PORT_CALL(unit, port) \
+    EXPECT_CALL(*bf_sde_mock_, EnablePort(unit, port))
+#endif
 
 namespace stratum {
 namespace hal {
 namespace barefoot {
 
-using PortStatusEvent = BfSdeInterface::PortStatusEvent;
+using PortStatusEvent = TdiSdeInterface::PortStatusEvent;
 using test_utils::EqualsProto;
 using ::testing::_;
 using ::testing::AtLeast;
@@ -56,6 +75,7 @@ constexpr int kSlot = 1;
 constexpr int kPort = 1;
 constexpr uint32 kPortId = 12345;
 constexpr uint32 kSdkPortOffset = 900000;
+constexpr uint32 kDefaultPortId = kSdkPortOffset + kPortId;
 constexpr uint64 kDefaultSpeedBps = kHundredGigBps;
 constexpr FecMode kDefaultFecMode = FEC_MODE_UNKNOWN;
 constexpr TriState kDefaultAutoneg = TRI_STATE_UNKNOWN;
@@ -78,16 +98,17 @@ MATCHER_P(GnmiEventEq, event, "") {
 class ChassisConfigBuilder {
  public:
   explicit ChassisConfigBuilder(uint64 node_id = kNodeId) : node_id(node_id) {
-    config_.set_description("Test config for BfChassisManager");
+    config_.set_description("Test config for IpdkChassisManager");
     auto* chassis = config_.mutable_chassis();
-    chassis->set_platform(PLT_GENERIC_BAREFOOT_TOFINO);
-    chassis->set_name("Tofino");
+    chassis->set_platform(PLT_GENERIC_BAREFOOT_TOFINO);  // TODO: GENERIC_IPU?
+    chassis->set_name("Tofino");  // TODO: "IPU"?
 
     auto* node = config_.add_nodes();
     node->set_id(node_id);
     node->set_slot(kSlot);
   }
 
+  // Adds a port to the ChassisConfig message.
   SingletonPort* AddPort(uint32 port_id, int32 port, AdminState admin_state,
                          uint64 speed_bps = kDefaultSpeedBps,
                          FecMode fec_mode = kDefaultFecMode,
@@ -100,13 +121,17 @@ class ChassisConfigBuilder {
     sport->set_slot(kSlot);
     sport->set_channel(0);
     sport->set_speed_bps(speed_bps);
-    sport->mutable_config_params()->set_admin_state(admin_state);
-    sport->mutable_config_params()->set_fec_mode(fec_mode);
-    sport->mutable_config_params()->set_autoneg(autoneg);
-    sport->mutable_config_params()->set_loopback_mode(loopback_mode);
+
+    auto* params = sport->mutable_config_params();
+    params->set_admin_state(admin_state);
+    params->set_fec_mode(fec_mode);
+    params->set_autoneg(autoneg);
+    params->set_loopback_mode(loopback_mode);
+
     return sport;
   }
 
+  // Gets a mutable singleton port from the ChassisConfig message.
   SingletonPort* GetPort(uint32 port_id) {
     for (auto& sport : *config_.mutable_singleton_ports()) {
       if (sport.id() == port_id) return &sport;
@@ -129,17 +154,19 @@ class ChassisConfigBuilder {
 
 }  // namespace
 
-class BfChassisManagerTest : public ::testing::Test {
+class IpdkChassisManagerTest : public ::testing::Test {
  protected:
-  BfChassisManagerTest() {}
+  IpdkChassisManagerTest() {}
 
   void SetUp() override {
     phal_mock_ = absl::make_unique<PhalMock>();
-    // Use NiceMock to suppress "uninteresting mock function call" warnings
-    bf_sde_mock_ = absl::make_unique<NiceMock<BfSdeMock>>();
-    // TODO(max): create parameterized test suite over mode.
-    bf_chassis_manager_ = BfChassisManager::CreateInstance(
+    // Use NiceMock to suppress default action/value warnings.
+    bf_sde_mock_ = absl::make_unique<NiceMock<TdiSdeMock>>();
+    // TODO(max): create parametrized test suite over mode.
+    m_chassis_manager_ = IpdkChassisManager::CreateInstance(
         OPERATION_MODE_STANDALONE, phal_mock_.get(), bf_sde_mock_.get());
+
+    // Expectations
     ON_CALL(*bf_sde_mock_, IsValidPort(_, _))
         .WillByDefault(
             WithArg<1>(Invoke([](uint32 id) { return id > kSdkPortOffset; })));
@@ -159,41 +186,45 @@ class BfChassisManagerTest : public ::testing::Test {
   }
 
   ::util::Status CheckCleanInternalState() {
-    CHECK_RETURN_IF_FALSE(bf_chassis_manager_->unit_to_node_id_.empty());
-    CHECK_RETURN_IF_FALSE(bf_chassis_manager_->node_id_to_unit_.empty());
+    CHECK_RETURN_IF_FALSE(m_chassis_manager_->unit_to_node_id_.empty());
+    CHECK_RETURN_IF_FALSE(m_chassis_manager_->node_id_to_unit_.empty());
     CHECK_RETURN_IF_FALSE(
-        bf_chassis_manager_->node_id_to_port_id_to_port_state_.empty());
+        m_chassis_manager_->node_id_to_port_id_to_port_state_.empty());
     CHECK_RETURN_IF_FALSE(
-        bf_chassis_manager_->node_id_to_port_id_to_port_config_.empty());
+        m_chassis_manager_->node_id_to_port_id_to_port_config_.empty());
     CHECK_RETURN_IF_FALSE(
-        bf_chassis_manager_->node_id_to_port_id_to_singleton_port_key_.empty());
+        m_chassis_manager_->node_id_to_port_id_to_singleton_port_key_.empty());
     CHECK_RETURN_IF_FALSE(
-        bf_chassis_manager_->node_id_to_port_id_to_sdk_port_id_.empty());
+        m_chassis_manager_->node_id_to_port_id_to_sdk_port_id_.empty());
     CHECK_RETURN_IF_FALSE(
-        bf_chassis_manager_->node_id_to_sdk_port_id_to_port_id_.empty());
+        m_chassis_manager_->node_id_to_sdk_port_id_to_port_id_.empty());
     CHECK_RETURN_IF_FALSE(
-        bf_chassis_manager_->xcvr_port_key_to_xcvr_state_.empty());
-    CHECK_RETURN_IF_FALSE(bf_chassis_manager_->port_status_event_channel_ ==
+        m_chassis_manager_->node_id_port_id_to_backend_.empty());
+#if 0
+    CHECK_RETURN_IF_FALSE(
+        m_chassis_manager_->xcvr_port_key_to_xcvr_state_.empty());
+    CHECK_RETURN_IF_FALSE(m_chassis_manager_->port_status_event_channel_ ==
                           nullptr);
-    CHECK_RETURN_IF_FALSE(bf_chassis_manager_->xcvr_event_channel_ == nullptr);
+    CHECK_RETURN_IF_FALSE(m_chassis_manager_->xcvr_event_channel_ == nullptr);
+#endif
     return ::util::OkStatus();
   }
 
-  bool Initialized() { return bf_chassis_manager_->initialized_; }
+  bool Initialized() { return m_chassis_manager_->initialized_; }
 
   ::util::Status VerifyChassisConfig(const ChassisConfig& config) {
     absl::ReaderMutexLock l(&chassis_lock);
-    return bf_chassis_manager_->VerifyChassisConfig(config);
+    return m_chassis_manager_->VerifyChassisConfig(config);
   }
 
   ::util::Status PushChassisConfig(const ChassisConfig& config) {
     absl::WriterMutexLock l(&chassis_lock);
-    return bf_chassis_manager_->PushChassisConfig(config);
+    return m_chassis_manager_->PushChassisConfig(config);
   }
 
   ::util::Status PushChassisConfig(const ChassisConfigBuilder& builder) {
     absl::WriterMutexLock l(&chassis_lock);
-    return bf_chassis_manager_->PushChassisConfig(builder.Get());
+    return m_chassis_manager_->PushChassisConfig(builder.Get());
   }
 
   ::util::Status PushBaseChassisConfig(ChassisConfigBuilder* builder) {
@@ -201,17 +232,20 @@ class BfChassisManagerTest : public ::testing::Test {
         << "Can only call PushBaseChassisConfig() for first ChassisConfig!";
     RegisterSdkPortId(builder->AddPort(kPortId, kPort, ADMIN_STATE_ENABLED));
 
+#if 0
     // Save the SDE channel writer to trigger port events with it later.
     EXPECT_CALL(*bf_sde_mock_, RegisterPortStatusEventWriter(_))
         .WillOnce([this](std::unique_ptr<ChannelWriter<PortStatusEvent>> arg0) {
           sde_event_writer_ = std::move(arg0);
           return ::util::OkStatus();
         });
+#endif
 
-    EXPECT_CALL(*bf_sde_mock_, AddPort(kUnit, kPortId + kSdkPortOffset,
-                                       kDefaultSpeedBps, kDefaultFecMode));
-    EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, kPortId + kSdkPortOffset));
+    EXPECT_ADD_PORT_CALL(kUnit, kDefaultPortId, kDefaultSpeedBps,
+                         kDefaultFecMode);
+    EXPECT_ENABLE_PORT_CALL(kUnit, kDefaultPortId);
 
+#if 0
     EXPECT_CALL(*phal_mock_,
                 RegisterTransceiverEventWriter(
                     _, PhalInterface::kTransceiverEventWriterPriorityHigh))
@@ -219,8 +253,10 @@ class BfChassisManagerTest : public ::testing::Test {
     EXPECT_CALL(*phal_mock_,
                 UnregisterTransceiverEventWriter(kTestTransceiverWriterId))
         .WillOnce(Return(::util::OkStatus()));
+#endif
 
     RETURN_IF_ERROR(PushChassisConfig(builder->Get()));
+
     auto unit = GetUnitFromNodeId(kNodeId);
     CHECK_RETURN_IF_FALSE(unit.ok());
     CHECK_RETURN_IF_FALSE(unit.ValueOrDie() == kUnit) << "Invalid unit number!";
@@ -231,7 +267,7 @@ class BfChassisManagerTest : public ::testing::Test {
 
   ::util::Status ReplayPortsConfig(uint64 node_id) {
     absl::WriterMutexLock l(&chassis_lock);
-    return bf_chassis_manager_->ReplayPortsConfig(node_id);
+    return m_chassis_manager_->ReplayPortsConfig(node_id);
   }
 
   ::util::Status PushBaseChassisConfig() {
@@ -241,14 +277,16 @@ class BfChassisManagerTest : public ::testing::Test {
 
   ::util::StatusOr<int> GetUnitFromNodeId(uint64 node_id) const {
     absl::ReaderMutexLock l(&chassis_lock);
-    return bf_chassis_manager_->GetUnitFromNodeId(node_id);
+    return m_chassis_manager_->GetUnitFromNodeId(node_id);
   }
 
-  ::util::Status Shutdown() { return bf_chassis_manager_->Shutdown(); }
+  ::util::Status Shutdown() { return m_chassis_manager_->Shutdown(); }
 
   ::util::Status ShutdownAndTestCleanState() {
+#if 0
     EXPECT_CALL(*bf_sde_mock_, UnregisterPortStatusEventWriter())
         .WillOnce(Return(::util::OkStatus()));
+#endif
     RETURN_IF_ERROR(Shutdown());
     RETURN_IF_ERROR(CheckCleanInternalState());
     return ::util::OkStatus();
@@ -256,20 +294,22 @@ class BfChassisManagerTest : public ::testing::Test {
 
   ::util::Status RegisterEventNotifyWriter(
       const std::shared_ptr<WriterInterface<GnmiEventPtr>>& writer) {
-    return bf_chassis_manager_->RegisterEventNotifyWriter(writer);
+    return m_chassis_manager_->RegisterEventNotifyWriter(writer);
   }
 
   ::util::Status UnregisterEventNotifyWriter() {
-    return bf_chassis_manager_->UnregisterEventNotifyWriter();
+    return m_chassis_manager_->UnregisterEventNotifyWriter();
   }
 
+#if 0
   std::unique_ptr<ChannelWriter<TransceiverEvent>> GetTransceiverEventWriter() {
     absl::WriterMutexLock l(&chassis_lock);
-    CHECK(bf_chassis_manager_->xcvr_event_channel_ != nullptr)
+    CHECK(m_chassis_manager_->xcvr_event_channel_ != nullptr)
         << "xcvr channel is null!";
     return ChannelWriter<PhalInterface::TransceiverEvent>::Create(
-        bf_chassis_manager_->xcvr_event_channel_);
+        m_chassis_manager_->xcvr_event_channel_);
   }
+#endif
 
   void TriggerPortStatusEvent(int device, int port, PortState state,
                               absl::Time time_last_changed) {
@@ -282,54 +322,54 @@ class BfChassisManagerTest : public ::testing::Test {
   }
 
   std::unique_ptr<PhalMock> phal_mock_;
-  std::unique_ptr<BfSdeMock> bf_sde_mock_;
+  std::unique_ptr<TdiSdeMock> bf_sde_mock_;
   std::unique_ptr<ChannelWriter<PortStatusEvent>> sde_event_writer_;
-  std::unique_ptr<BfChassisManager> bf_chassis_manager_;
+  std::unique_ptr<IpdkChassisManager> m_chassis_manager_;
 
   static constexpr int kTestTransceiverWriterId = 20;
 };
 
-TEST_F(BfChassisManagerTest, PreFirstConfigPushState) {
+TEST_F(IpdkChassisManagerTest, PreFirstConfigPushState) {
   ASSERT_OK(CheckCleanInternalState());
   EXPECT_FALSE(Initialized());
   // TODO(antonin): add more checks (to verify that method calls fail as
   // expected)
 }
 
-TEST_F(BfChassisManagerTest, FirstConfigPush) {
+TEST_F(IpdkChassisManagerTest, FirstConfigPush) {
   ASSERT_OK(PushBaseChassisConfig());
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(BfChassisManagerTest, RemovePort) {
+TEST_F(IpdkChassisManagerTest, RemovePort) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
   builder.RemoveLastPort();
-  EXPECT_CALL(*bf_sde_mock_, DeletePort(kUnit, kPortId + kSdkPortOffset));
+  EXPECT_CALL(*bf_sde_mock_, DeletePort(kUnit, kDefaultPortId));
   ASSERT_OK(PushChassisConfig(builder));
 
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(BfChassisManagerTest, AddPortFec) {
+TEST_F(IpdkChassisManagerTest, AddPortFec) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
   const uint32 portId = kPortId + 1;
   const int port = kPort + 1;
+  const uint32 sdkPortId = portId + kSdkPortOffset;
 
   RegisterSdkPortId(builder.AddPort(portId, port, ADMIN_STATE_ENABLED,
                                     kHundredGigBps, FEC_MODE_ON));
-  EXPECT_CALL(*bf_sde_mock_, AddPort(kUnit, portId + kSdkPortOffset,
-                                     kHundredGigBps, FEC_MODE_ON));
-  EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, portId + kSdkPortOffset));
+  EXPECT_ADD_PORT_CALL(kUnit, sdkPortId, kDefaultSpeedBps, kDefaultFecMode);
+  EXPECT_ENABLE_PORT_CALL(kUnit, sdkPortId);
   ASSERT_OK(PushChassisConfig(builder));
 
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(BfChassisManagerTest, SetPortLoopback) {
+TEST_F(IpdkChassisManagerTest, SetPortLoopback) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
@@ -338,14 +378,15 @@ TEST_F(BfChassisManagerTest, SetPortLoopback) {
 
   EXPECT_CALL(
       *bf_sde_mock_,
-      SetPortLoopbackMode(kUnit, kPortId + kSdkPortOffset, LOOPBACK_STATE_MAC));
-  EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, kPortId + kSdkPortOffset));
+      SetPortLoopbackMode(kUnit, kDefaultPortId, LOOPBACK_STATE_MAC));
+  EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, kDefaultPortId));
 
   ASSERT_OK(PushChassisConfig(builder));
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(BfChassisManagerTest, ApplyPortShaping) {
+#if 0
+TEST_F(IpdkChassisManagerTest, ApplyPortShaping) {
   const std::string kVendorConfigText = R"PROTO(
     tofino_config {
       node_id_to_port_shaping_config {
@@ -372,20 +413,22 @@ TEST_F(BfChassisManagerTest, ApplyPortShaping) {
   builder.SetVendorConfig(vendor_config);
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
-  EXPECT_CALL(*bf_sde_mock_, SetPortShapingRate(kUnit, kPortId + kSdkPortOffset,
+  EXPECT_CALL(*bf_sde_mock_, SetPortShapingRate(kUnit, kDefaultPortId,
                                                 false, 16384, kTenGigBps))
       .Times(AtLeast(1));
-  EXPECT_CALL(*bf_sde_mock_, EnablePortShaping(kUnit, kPortId + kSdkPortOffset,
+  EXPECT_CALL(*bf_sde_mock_, EnablePortShaping(kUnit, kDefaultPortId,
                                                TRI_STATE_TRUE))
       .Times(AtLeast(1));
-  EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, kPortId + kSdkPortOffset))
+  EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, kDefaultPortId))
       .Times(AtLeast(1));
 
   ASSERT_OK(PushChassisConfig(builder));
   ASSERT_OK(ShutdownAndTestCleanState());
 }
+#endif
 
-TEST_F(BfChassisManagerTest, ApplyDeflectOnDrop) {
+#if 0
+TEST_F(IpdkChassisManagerTest, ApplyDeflectOnDrop) {
   const std::string kVendorConfigText = R"PROTO(
     tofino_config {
       node_id_to_deflect_on_drop_configs {
@@ -412,7 +455,7 @@ TEST_F(BfChassisManagerTest, ApplyDeflectOnDrop) {
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
   EXPECT_CALL(*bf_sde_mock_,
-              SetDeflectOnDropDestination(kUnit, kPortId + kSdkPortOffset, 4))
+              SetDeflectOnDropDestination(kUnit, kDefaultPortId, 4))
       .Times(AtLeast(1));
   EXPECT_CALL(*bf_sde_mock_, SetDeflectOnDropDestination(kUnit, 56789, 1))
       .Times(AtLeast(1));
@@ -420,8 +463,9 @@ TEST_F(BfChassisManagerTest, ApplyDeflectOnDrop) {
   ASSERT_OK(PushChassisConfig(builder));
   ASSERT_OK(ShutdownAndTestCleanState());
 }
+#endif
 
-TEST_F(BfChassisManagerTest, ReplayPorts) {
+TEST_F(IpdkChassisManagerTest, ReplayPorts) {
   const std::string kVendorConfigText = R"PROTO(
     tofino_config {
       node_id_to_deflect_on_drop_configs {
@@ -461,11 +505,11 @@ TEST_F(BfChassisManagerTest, ReplayPorts) {
   builder.SetVendorConfig(vendor_config);
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
-  const uint32 sdkPortId = kPortId + kSdkPortOffset;
-  EXPECT_CALL(*bf_sde_mock_,
-              AddPort(kUnit, sdkPortId, kDefaultSpeedBps, kDefaultFecMode));
-  EXPECT_CALL(*bf_sde_mock_, EnablePort(kUnit, sdkPortId));
+  const uint32 sdkPortId = kDefaultPortId;
+  EXPECT_ADD_PORT_CALL(kUnit, sdkPortId, kDefaultSpeedBps, kDefaultFecMode);
+  EXPECT_ENABLE_PORT_CALL(kUnit, sdkPortId);
 
+#if 0
   // For now, when replaying the port configuration, we set the mtu and autoneg
   // even if the values where already the defaults. This seems like a good idea
   // to ensure configuration consistency.
@@ -483,13 +527,15 @@ TEST_F(BfChassisManagerTest, ReplayPorts) {
   EXPECT_CALL(*bf_sde_mock_,
               EnablePortShaping(kUnit, sdkPortId, TRI_STATE_TRUE))
       .Times(AtLeast(1));
+#endif
 
   EXPECT_OK(ReplayPortsConfig(kNodeId));
 
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(BfChassisManagerTest, TransceiverEvent) {
+#if 0
+TEST_F(IpdkChassisManagerTest, TransceiverEvent) {
   ASSERT_OK(PushBaseChassisConfig());
   auto xcvr_event_writer = GetTransceiverEventWriter();
 
@@ -504,18 +550,20 @@ TEST_F(BfChassisManagerTest, TransceiverEvent) {
 
   ASSERT_OK(ShutdownAndTestCleanState());
 }
+#endif
 
+#if 0
 template <typename T>
-T GetPortData(BfChassisManager* bf_chassis_manager_, uint64 node_id,
-              int port_id,
-              DataRequest::Request::Port* (
-                  DataRequest::Request::*get_mutable_message_func)(),
-              const T& (DataResponse::*data_response_get_message_func)() const,
-              bool (DataResponse::*data_response_has_message_func)() const) {
+T GetPortData(
+    IpdkChassisManager* chassis_mgr, uint64 node_id, int port_id,
+    DataRequest::Request::Port*
+        (DataRequest::Request::*get_mutable_message_func)(),
+    const T& (DataResponse::*data_response_get_message_func)() const,
+    bool (DataResponse::*data_response_has_message_func)() const) {
   DataRequest::Request req;
   (req.*get_mutable_message_func)()->set_node_id(node_id);
   (req.*get_mutable_message_func)()->set_port_id(port_id);
-  auto resp = bf_chassis_manager_->GetPortData(req);
+  auto resp = chassis_mgr->GetPortData(req);
   EXPECT_OK(resp);
 
   DataResponse data_resp = resp.ValueOrDie();
@@ -524,38 +572,34 @@ T GetPortData(BfChassisManager* bf_chassis_manager_, uint64 node_id,
 }
 
 template <typename T, typename U>
-void GetPortDataTest(BfChassisManager* bf_chassis_manager_, uint64 node_id,
-                     int port_id,
-                     DataRequest::Request::Port* (
-                         DataRequest::Request::*get_mutable_message_func)(),
-                     const T& (DataResponse::*data_response_get_message_func)()
-                         const,
-                     bool (DataResponse::*data_response_has_message_func)()
-                         const,
-                     U (T::*get_inner_message_func)() const, U expected_value) {
+void GetPortDataTest(
+    IpdkChassisManager* chassis_mgr, uint64 node_id, int port_id,
+    DataRequest::Request::Port*
+        (DataRequest::Request::*get_mutable_message_func)(),
+    const T& (DataResponse::*data_response_get_message_func)() const,
+    bool (DataResponse::*data_response_has_message_func)() const,
+    U (T::*get_inner_message_func)() const, U expected_value) {
   const T& val = GetPortData(
-      bf_chassis_manager_, node_id, port_id, get_mutable_message_func,
+      chassis_mgr, node_id, port_id, get_mutable_message_func,
       data_response_get_message_func, data_response_has_message_func);
   EXPECT_EQ((val.*get_inner_message_func)(), expected_value);
 }
 
 template <typename T>
-void GetPortDataTest(BfChassisManager* bf_chassis_manager_, uint64 node_id,
-                     int port_id,
-                     DataRequest::Request::Port* (
-                         DataRequest::Request::*get_mutable_message_func)(),
-                     const T& (DataResponse::*data_response_get_message_func)()
-                         const,
-                     bool (DataResponse::*data_response_has_message_func)()
-                         const,
-                     T expected_msg) {
-  T val = GetPortData(bf_chassis_manager_, node_id, port_id,
-                      get_mutable_message_func, data_response_get_message_func,
-                      data_response_has_message_func);
+void GetPortDataTest(
+    IpdkChassisManager* chassis_mgr, uint64 node_id, int port_id,
+    DataRequest::Request::Port*
+        (DataRequest::Request::*get_mutable_message_func)(),
+    const T& (DataResponse::*data_response_get_message_func)() const,
+    bool (DataResponse::*data_response_has_message_func)() const,
+    T expected_msg) {
+  T val = GetPortData(
+      chassis_mgr, node_id, port_id, get_mutable_message_func,
+      data_response_get_message_func, data_response_has_message_func);
   EXPECT_THAT(val, EqualsProto(expected_msg));
 }
 
-TEST_F(BfChassisManagerTest, GetPortData) {
+TEST_F(IpdkChassisManagerTest, DISABLED_GetPortData) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
@@ -652,7 +696,7 @@ TEST_F(BfChassisManagerTest, GetPortData) {
   TriggerPortStatusEvent(456, sdkPortId, PORT_STATE_UP,
                          kPortTimeLastChanged1);  // Unknown device
   ASSERT_TRUE(first_link_up.WaitForNotificationWithTimeout(absl::Seconds(5)));
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_oper_status,
                   &DataResponse::oper_status, &DataResponse::has_oper_status,
                   &OperStatus::state, PORT_STATE_UP);
@@ -665,79 +709,79 @@ TEST_F(BfChassisManagerTest, GetPortData) {
                          kPortTimeLastChanged3);
   ASSERT_TRUE(port_flip_done.WaitForNotificationWithTimeout(absl::Seconds(5)));
   OperStatus oper_status =
-      GetPortData(bf_chassis_manager_.get(), kNodeId, portId,
+      GetPortData(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_oper_status,
                   &DataResponse::oper_status, &DataResponse::has_oper_status);
   EXPECT_EQ(kPortTimeLastChanged3,
             absl::FromUnixNanos(oper_status.time_last_changed()));
 
   // Admin status
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_admin_status,
                   &DataResponse::admin_status, &DataResponse::has_admin_status,
                   &AdminStatus::state, ADMIN_STATE_ENABLED);
 
   // Port speed
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_port_speed,
                   &DataResponse::port_speed, &DataResponse::has_port_speed,
                   &PortSpeed::speed_bps, kHundredGigBps);
 
   // LACP router MAC
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_lacp_router_mac,
                   &DataResponse::lacp_router_mac,
                   &DataResponse::has_lacp_router_mac, &MacAddress::mac_address,
                   0x112233445566ul);
 
   // Negotiated port speed
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_negotiated_port_speed,
                   &DataResponse::negotiated_port_speed,
                   &DataResponse::has_negotiated_port_speed,
                   &PortSpeed::speed_bps, kHundredGigBps);
 
   // Port counters
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_port_counters,
                   &DataResponse::port_counters,
                   &DataResponse::has_port_counters, counters);
 
   // Autoneg status
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_autoneg_status,
                   &DataResponse::autoneg_status,
                   &DataResponse::has_autoneg_status,
                   &AutonegotiationStatus::state, TRI_STATE_TRUE);
 
   // Front panel info
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_front_panel_port_info,
                   &DataResponse::front_panel_port_info,
                   &DataResponse::has_front_panel_port_info,
                   front_panel_port_info);
 
   // FEC status
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_fec_status,
                   &DataResponse::fec_status, &DataResponse::has_fec_status,
                   &FecStatus::mode, FEC_MODE_ON);
 
   // Loopback mode
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_loopback_status,
                   &DataResponse::loopback_status,
                   &DataResponse::has_loopback_status, &LoopbackStatus::state,
                   LOOPBACK_STATE_MAC);
 
   // SDK port number
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_sdn_port_id,
                   &DataResponse::sdn_port_id, &DataResponse::has_sdn_port_id,
                   &SdnPortId::port_id, sdkPortId);
 
   // Forwarding Viability
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_forwarding_viability,
                   &DataResponse::forwarding_viability,
                   &DataResponse::has_forwarding_viability,
@@ -745,14 +789,14 @@ TEST_F(BfChassisManagerTest, GetPortData) {
                   TRUNK_MEMBER_BLOCK_STATE_UNKNOWN);
 
   // Health Indicator
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_health_indicator,
                   &DataResponse::health_indicator,
                   &DataResponse::has_health_indicator, &HealthIndicator::state,
                   HEALTH_STATE_UNKNOWN);
 
   // SDN port ID
-  GetPortDataTest(bf_chassis_manager_.get(), kNodeId, portId,
+  GetPortDataTest(m_chassis_manager_.get(), kNodeId, portId,
                   &DataRequest::Request::mutable_sdn_port_id,
                   &DataResponse::sdn_port_id, &DataResponse::has_sdn_port_id,
                   &SdnPortId::port_id, sdkPortId);
@@ -760,8 +804,9 @@ TEST_F(BfChassisManagerTest, GetPortData) {
   ASSERT_OK(UnregisterEventNotifyWriter());
   ASSERT_OK(ShutdownAndTestCleanState());
 }
+#endif
 
-TEST_F(BfChassisManagerTest, UpdateInvalidPort) {
+TEST_F(IpdkChassisManagerTest, DISABLED_UpdateInvalidPort) {
   ASSERT_OK(PushBaseChassisConfig());
   ChassisConfigBuilder builder;
   const uint32 portId = kPortId + 1;
@@ -792,7 +837,7 @@ TEST_F(BfChassisManagerTest, UpdateInvalidPort) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(BfChassisManagerTest, VerifyChassisConfigSuccess) {
+TEST_F(IpdkChassisManagerTest, VerifyChassisConfigSuccess) {
   const std::string kConfigText1 = R"(
       description: "Sample Generic Tofino config 2x25G ports."
       chassis {

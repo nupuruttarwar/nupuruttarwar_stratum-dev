@@ -8,13 +8,17 @@
 
 #include <functional>
 #include <set>
+#if 0
 #include <map>
+#endif
 #include <memory>
 #include <utility>
 
 #include "stratum/hal/lib/common/phal_interface.h"
+#if 0
 #include "stratum/hal/lib/phal/phal.pb.h"
 #include "stratum/hal/lib/phal/sfp_configurator.h"
+#endif
 #include "absl/synchronization/mutex.h"
 
 namespace stratum {
@@ -83,10 +87,12 @@ class PhalSim : public PhalInterface {
   std::multiset<TransceiverEventWriter, TransceiverEventWriterComp>
       transceiver_event_writers_ GUARDED_BY(config_lock_);
 
+#if 0
   // Map from std::pair<int, int> representing (slot, port) of singleton port
   // to the vector of sfp datasource id
   std::map<std::pair<int, int>,
     ::stratum::hal::phal::SfpConfigurator*> slot_port_to_configurator_;
+#endif
 
   // Determines if PHAL is fully initialized.
   bool initialized_ GUARDED_BY(config_lock_);

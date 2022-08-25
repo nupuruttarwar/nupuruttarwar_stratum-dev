@@ -1,8 +1,9 @@
 // Copyright 2020-present Open Networking Foundation
+// Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_BAREFOOT_BFRT_SWITCH_H_
-#define STRATUM_HAL_LIB_BAREFOOT_BFRT_SWITCH_H_
+#ifndef STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
+#define STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
 
 #include <map>
 #include <memory>
@@ -10,9 +11,8 @@
 #include <vector>
 
 #include "absl/synchronization/mutex.h"
-#include "stratum/hal/lib/barefoot/bf_chassis_manager.h"
-#include "stratum/hal/lib/barefoot/bf_sde_interface.h"
-#include "stratum/hal/lib/barefoot/bfrt_node.h"
+#include "stratum/hal/lib/tdi/tdi_sde_interface.h"
+#include "stratum/hal/lib/tdi/tdi_node.h"
 #include "stratum/hal/lib/common/phal_interface.h"
 #include "stratum/hal/lib/common/switch_interface.h"
 
@@ -20,9 +20,11 @@ namespace stratum {
 namespace hal {
 namespace barefoot {
 
-class BfrtSwitch : public SwitchInterface {
+class TdiChassisManager;
+
+class TdiSwitch : public SwitchInterface {
  public:
-  ~BfrtSwitch() override;
+  ~TdiSwitch() override;
 
   // SwitchInterface public methods.
   ::util::Status PushChassisConfig(const ChassisConfig& config) override
@@ -75,62 +77,62 @@ class BfrtSwitch : public SwitchInterface {
   ::util::StatusOr<std::vector<std::string>> VerifyState() override;
 
   // Factory function for creating the instance of the class.
-  static std::unique_ptr<BfrtSwitch> CreateInstance(
-      PhalInterface* phal_interface, BfChassisManager* bf_chassis_manager,
-      BfSdeInterface* bf_sde_interface,
-      const std::map<int, BfrtNode*>& device_id_to_bfrt_node);
+  static std::unique_ptr<TdiSwitch> CreateInstance(
+      PhalInterface* phal_interface, TdiChassisManager* tdi_chassis_manager,
+      TdiSdeInterface* tdi_sde_interface,
+      const std::map<int, TdiNode*>& device_id_to_tdi_node);
 
-  // BfrtSwitch is neither copyable nor movable.
-  BfrtSwitch(const BfrtSwitch&) = delete;
-  BfrtSwitch& operator=(const BfrtSwitch&) = delete;
-  BfrtSwitch(BfrtSwitch&&) = delete;
-  BfrtSwitch& operator=(BfrtSwitch&&) = delete;
+  // TdiSwitch is neither copyable nor movable.
+  TdiSwitch(const TdiSwitch&) = delete;
+  TdiSwitch& operator=(const TdiSwitch&) = delete;
+  TdiSwitch(TdiSwitch&&) = delete;
+  TdiSwitch& operator=(TdiSwitch&&) = delete;
 
  private:
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  BfrtSwitch(PhalInterface* phal_interface,
-             BfChassisManager* bf_chassis_manager,
-             BfSdeInterface* bf_sde_interface,
-             const std::map<int, BfrtNode*>& device_id_to_bfrt_node);
+  TdiSwitch(PhalInterface* phal_interface,
+            TdiChassisManager* tdi_chassis_manager,
+            TdiSdeInterface* tdi_sde_interface,
+            const std::map<int, TdiNode*>& device_id_to_tdi_node);
 
-  // Helper to get BfrtNode pointer from device_id number or return error
+  // Helper to get TdiNode pointer from device_id number or return error
   // indicating invalid device_id.
-  ::util::StatusOr<BfrtNode*> GetBfrtNodeFromDeviceId(int device_id) const;
+  ::util::StatusOr<TdiNode*> GetTdiNodeFromDeviceId(int device_id) const;
 
-  // Helper to get BfrtNode pointer from node id or return error indicating
+  // Helper to get TdiNode pointer from node id or return error indicating
   // invalid/unknown/uninitialized node.
-  ::util::StatusOr<BfrtNode*> GetBfrtNodeFromNodeId(uint64 node_id) const;
+  ::util::StatusOr<TdiNode*> GetTdiNodeFromNodeId(uint64 node_id) const;
 
   // Pointer to a PhalInterface implementation. The pointer has been also
   // passed to a few managers for accessing HW. Note that there is only one
   // instance of this class per chassis.
   PhalInterface* phal_interface_;  // not owned by this class.
 
-  // Pointer to a BfSdeInterface implementation that wraps PD API calls.
-  BfSdeInterface* bf_sde_interface_;  // not owned by this class.
+  // Pointer to a TdiSdeInterface implementation that wraps PD API calls.
+  TdiSdeInterface* tdi_sde_interface_;  // not owned by this class.
 
   // Per chassis Managers. Note that there is only one instance of this class
   // per chassis.
-  BfChassisManager* bf_chassis_manager_;  // not owned by the class.
+  TdiChassisManager* tdi_chassis_manager_;  // not owned by the class.
 
   // Map from zero-based device_id number corresponding to a node/ASIC to a
-  // pointer to BfrtNode which contains all the per-node managers for that
+  // pointer to TdiNode which contain all the per-node managers for that
   // node/ASIC. This map is initialized in the constructor and will not change
   // during the lifetime of the class.
   // TODO(max): Does this need to be protected by chassis_lock?
-  const std::map<int, BfrtNode*> device_id_to_bfrt_node_;  // pointers not owned
+  const std::map<int, TdiNode*> device_id_to_tdi_node_;  // pointers not owned
 
-  // Map from the node ids to to a pointer to BfrtNode which contain all the
-  // per-node managers for that node/ASIC. Created whenever a config is pushed.
-  // At any point in time, this map will contain as keys the ids of the nodes
-  // that had a successful config push.
+  // Map from the node ids to to a pointer to TdiNode which contain all the
+  // per-node managers for that node/ASIC. Created everytime a config is pushed.
+  // At any point of time this map will contain a keys the ids of the nodes
+  // which had a successful config push.
   // TODO(max): Does this need to be protected by chassis_lock?
-  std::map<uint64, BfrtNode*> node_id_to_bfrt_node_;  //  pointers not owned
+  std::map<uint64, TdiNode*> node_id_to_tdi_node_;  //  pointers not owned
 };
 
 }  // namespace barefoot
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_BAREFOOT_BFRT_SWITCH_H_
+#endif  // STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
