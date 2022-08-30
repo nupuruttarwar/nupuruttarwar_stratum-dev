@@ -9,7 +9,7 @@
 
 #include "p4/v1/p4runtime.pb.h"
 #include "stratum/glue/status/status.h"
-#include "stratum/hal/lib/tdi/bf.pb.h"
+#include "stratum/hal/lib/tdi/tdi.pb.h"
 
 namespace stratum {
 namespace hal {

@@ -15,7 +15,7 @@
 #include "stratum/glue/status/status.h"
 #include "stratum/hal/lib/common/common.pb.h"
 #include "stratum/hal/lib/common/writer_interface.h"
-#include "stratum/hal/lib/tdi/bf.pb.h"
+#include "stratum/hal/lib/tdi/tdi.pb.h"
 #include "stratum/hal/lib/tdi/tdi_action_profile_manager.h"
 #include "stratum/hal/lib/tdi/tdi_counter_manager.h"
 #include "stratum/hal/lib/tdi/tdi_packetio_manager.h"

@@ -220,7 +220,7 @@ stratum_cc_library(
 
 proto_library(
     name = "tdi_proto",
-    srcs = ["bf.proto"],
+    srcs = ["tdi.proto"],
     deps = [
         "@com_github_p4lang_p4runtime//:p4info_proto",
     ],

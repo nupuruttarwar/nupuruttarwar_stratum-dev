@@ -10,7 +10,7 @@ package stratum.hal.barefoot;
 
 import "p4/config/v1/p4info.proto";
 
-// This message describes the public Barefoot specific definition of a single P4
+// This message describes the public Barefoot-specific definition of a single P4
 // program. It is passed to Stratum as the p4 device config of the P4Runtime
 // ForwardingPipelineConfig message.
 message BfPipelineConfig {
