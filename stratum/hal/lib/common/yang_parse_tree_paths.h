@@ -14,9 +14,9 @@ namespace stratum {
 namespace hal {
 
 // A companion class to YangParseTree class that contains implementation of all
-// suppored YANG paths. Having the actual path implementation here makes the
+// supported YANG paths. Having the actual path implementation here makes the
 // code easier to manage and will allow for (future) generation of this part of
-// this code.
+// the code.
 class YangParseTreePaths {
  public:
   // A helper method handling mundane details of sending a  message that marks

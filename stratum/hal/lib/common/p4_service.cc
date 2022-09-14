@@ -1,5 +1,6 @@
 // Copyright 2018 Google LLC
 // Copyright 2018-present Open Networking Foundation
+// Copyright 2021-2022 Intel Corporation.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "stratum/hal/lib/common/p4_service.h"
@@ -50,7 +51,7 @@ DEFINE_int32(max_num_controller_connections, 20,
 namespace stratum {
 namespace hal {
 
-// TODO(unknown): This class move possibly big configs in memory. See if there
+// TODO(unknown): This class moves possibly big configs in memory. See if there
 // is a way to make this more efficient.
 
 P4Service::P4Service(OperationMode mode, SwitchInterface* switch_interface,
@@ -67,9 +68,9 @@ P4Service::P4Service(OperationMode mode, SwitchInterface* switch_interface,
 P4Service::~P4Service() {}
 
 ::util::Status P4Service::Setup(bool warmboot) {
-  // If we are coupled mode and are coldbooting, we wait for controller to push
-  // the forwarding pipeline config. We do not do anything here.
-  // TODO(unknown): This will be removed when we completely move to
+  // If we are in coupled mode and are coldbooting, we wait for the controller
+  // to push the forwarding pipeline config. We do not do anything here.
+  // TODO(unknown): This will be removed when we transition completely to
   // standalone mode.
   if (!warmboot && mode_ == OPERATION_MODE_COUPLED) {
     LOG(INFO) << "Skipped pushing the saved forwarding pipeline config(s) in "
@@ -155,8 +156,7 @@ P4Service::~P4Service() {}
         error_buffer_->AddError(
             error,
             absl::StrCat("Failed to push the saved forwarding pipeline configs "
-                         "for node ",
-                         e.first, ": "),
+                         "for node ", e.first, ": "),
             GTL_LOC);
         APPEND_STATUS_IF_ERROR(status, error);
       } else {
@@ -394,6 +394,18 @@ void LogReadRequest(uint64 node_id, const ::p4::v1::ReadRequest& req,
                      node_id, "."));
   }
 
+#ifdef P4OVS_CHANGES
+  // FIXME: We do not support overwrite of an already configured pipeline
+  // for a single device. Remove this check when support for overwriting an
+  // already configured forwarding pipeline is available.
+  if (forwarding_pipeline_configs_ != nullptr &&
+      forwarding_pipeline_configs_->node_id_to_config_size() != 0) {
+    return ::grpc::Status(::grpc::StatusCode::FAILED_PRECONDITION,
+                          "Only a single forwarding pipeline can be pushed "
+                          "for any node so far.");
+  }
+#endif
+
   ::util::Status status = ::util::OkStatus();
   switch (req->action()) {
     case ::p4::v1::SetForwardingPipelineConfigRequest::VERIFY:
@@ -417,11 +429,11 @@ void LogReadRequest(uint64 node_id, const ::p4::v1::ReadRequest& req,
       ::util::Status error;
       if (req->action() ==
           ::p4::v1::SetForwardingPipelineConfigRequest::VERIFY_AND_COMMIT) {
-        error = switch_interface_->PushForwardingPipelineConfig(node_id,
-                                                                req->config());
+        error = switch_interface_->PushForwardingPipelineConfig(
+            node_id, req->config());
       } else {  // VERIFY_AND_SAVE
-        error = switch_interface_->SaveForwardingPipelineConfig(node_id,
-                                                                req->config());
+        error = switch_interface_->SaveForwardingPipelineConfig(
+            node_id, req->config());
       }
       APPEND_STATUS_IF_ERROR(status, error);
       // If the config push was successful or reported reboot required, save
