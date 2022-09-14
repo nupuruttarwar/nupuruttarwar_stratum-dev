@@ -13,7 +13,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/synchronization/mutex.h"
 
-#ifndef DPDK_TARGET
+#ifdef TOFINO_TARGET
 #include "pkt_mgr/pkt_mgr_intf.h"
 #endif
 #include "stratum/glue/integral_types.h"
@@ -24,15 +24,6 @@
 #include "stratum/hal/lib/tdi/macros.h"
 #include "stratum/hal/lib/common/common.pb.h"
 #include "stratum/lib/channel/channel.h"
-
-#include "tdi/common/tdi_info.hpp"
-#include "tdi/common/tdi_table.hpp"
-#include "tdi/common/tdi_table_key.hpp"
-#include "tdi/common/tdi_defs.h"
-#include "tdi_rt/tdi_rt_defs.h"
-#include "tdi/common/tdi_init.hpp"
-#include "tdi/common/tdi_json_parser/tdi_table_info.hpp"
-#include "tdi/arch/pna/pna_defs.h"
 
 namespace stratum {
 namespace hal {
@@ -108,7 +99,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
   // Default MTU for ports on Tofino.
   static constexpr int32 kBfDefaultMtu = 10 * 1024;  // 10K
 
-  // Wrapper around the tdirt session object.
+  // Wrapper around the TDI session object.
   class Session : public TdiSdeInterface::SessionInterface {
    public:
     // SessionInterface public methods.
@@ -269,7 +260,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, absl::optional<uint32> register_index,
       std::vector<uint32>* register_indices,
-      std::vector<uint64>* register_datas, absl::Duration timeout) override
+      std::vector<uint64>* register_values, absl::Duration timeout) override
       LOCKS_EXCLUDED(data_lock_);
   ::util::Status WriteIndirectMeter(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -297,7 +288,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
   ::util::Status GetActionProfileMembers(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, int member_id, std::vector<int>* member_ids,
-      std::vector<std::unique_ptr<TableDataInterface>>* table_datas) override
+      std::vector<std::unique_ptr<TableDataInterface>>* table_values) override
       LOCKS_EXCLUDED(data_lock_);
   ::util::Status InsertActionProfileGroup(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -345,7 +336,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id,
       std::vector<std::unique_ptr<TableKeyInterface>>* table_keys,
-      std::vector<std::unique_ptr<TableDataInterface>>* table_datas) override
+      std::vector<std::unique_ptr<TableDataInterface>>* table_values) override
       LOCKS_EXCLUDED(data_lock_);
   ::util::Status SetDefaultTableEntry(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -378,7 +369,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
   // Return the singleton instance to be used in the SDE callbacks.
   static TdiSdeWrapper* GetSingleton() LOCKS_EXCLUDED(init_lock_);
 
-#ifndef DPDK_TARGET
+#ifdef TOFINO_TARGET
   // Writes a received packet to the registered Rx writer. Called from the SDE
   // callback function.
   ::util::Status HandlePacketRx(bf_dev_id_t device, bf_pkt* pkt,
@@ -424,7 +415,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
   // RW mutex lock for protecting the pipeline state.
   mutable absl::Mutex data_lock_;
 
-#ifndef DPDK_TARGET
+#ifdef TOFINO_TARGET
   // Callback registed with the SDE for Tx notifications.
   static bf_status_t BfPktTxNotifyCallback(bf_dev_id_t device,
                                            bf_pkt_tx_ring_t tx_ring,
@@ -474,7 +465,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
       SHARED_LOCKS_REQUIRED(data_lock_);
 
   // Synchronizes the driver cached register values with the current hardware
-  // state for a given TdiRt table.
+  // state for a given TDI table.
   // TODO(max): consolidate with SynchronizeCounters
   ::util::Status SynchronizeRegisters(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,

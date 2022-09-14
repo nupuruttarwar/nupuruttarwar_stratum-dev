@@ -40,17 +40,15 @@ stratum_cc_binary(
     ],
 )
 
-# SDE_INSTALL_TAR is not defined
-# no such target '@local_barefoot_bin//::sde_version_9.2.0'
 stratum_cc_binary(
     name = "stratum_tdi",
     srcs = [
-        "main_bfrt.cc",
+        "tdi_main.cc",
     ],
     arches = HOST_ARCHES,
     data = [
-        "tofino_skip_p4.conf",
-        "tofino_skip_p4_no_bsp.conf",
+        "//stratum/hal/lib/barefoot:tofino_skip_p4.conf",
+        "//stratum/hal/lib/barefoot:tofino_skip_p4_no_bsp.conf",
     ],
     deps = [
         "//stratum/hal/lib/tdi:tdi_chassis_manager",
@@ -91,8 +89,8 @@ pkg_tar(
 pkg_tar(
     name = "stratum_shareable_files",
     srcs = [
-        "tofino_skip_p4.conf",
-        "tofino_skip_p4_no_bsp.conf",
+        "//stratum/hal/lib/barefoot:tofino_skip_p4.conf",
+        "//stratum/hal/lib/barefoot:tofino_skip_p4_no_bsp.conf",
     ],
     mode = "0644",
     package_dir = "/usr/share/stratum",
@@ -136,7 +134,7 @@ pkg_tar(
 pkg_deb(
     name = "stratum_tdi_deb",
     architecture = "amd64",
-#   conflicts = ["stratum-bf"],
+#   conflicts = ["stratum-bfrt"],
     data = ":stratum_tdi_data",
     depends = [
         "kmod",
@@ -145,7 +143,7 @@ pkg_deb(
         "systemd",
         "telnet",
     ],
-    description = "The Stratum package for Barefoot Tofino-based platform",
+    description = "The Stratum package for an Intel Tofino-based platform",
     homepage = "https://stratumproject.org/",
     maintainer = "The Stratum Project",
     package = "stratum-tdi",

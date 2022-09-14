@@ -16,10 +16,6 @@
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 
-#ifdef TOFINO_TARGET
-#include "lld/lld_sku.h"
-#endif
-
 #include "stratum/glue/gtl/cleanup.h"
 #include "stratum/glue/gtl/map_util.h"
 #include "stratum/glue/gtl/stl_util.h"
@@ -37,14 +33,20 @@
 #include "stratum/lib/utils.h"
 
 extern "C" {
-#include "bf_switchd/lib/bf_switchd_lib_init.h"
-#include "bf_pal/bf_pal_port_intf.h"
-#include "bf_pal/dev_intf.h"
 
-#ifdef TOFINO_TARGET
-#include "tofino/bf_pal/pltfm_intf.h"
-#include "tofino/pdfixed/pd_devport_mgr.h"
-#include "pdfixed/pd_tm.h"
+#if defined(TOFINO_TARGET)
+  #include "lld/lld_sku.h"
+  #include "tofino/bf_pal/pltfm_intf.h"
+  #include "tofino/pdfixed/pd_devport_mgr.h"
+  #include "pdfixed/pd_tm.h"
+  #include "tdi_tofino/tdi_tofino_defs.h"
+#elif defined(DPDK_TARGET)
+  #include "bf_switchd/lib/bf_switchd_lib_init.h"
+  #include "bf_pal/bf_pal_port_intf.h"
+  #include "bf_pal/dev_intf.h"
+  #include "tdi_rt/tdi_rt_defs.h"
+#else
+  #error Target not defined
 #endif
 
 #ifndef P4OVS_CHANGES
@@ -60,12 +62,10 @@ int switch_pci_sysfs_str_get(char* name, size_t name_size);
 #define RETURN_IF_NULL(expr)                                                 \
   do {                                                                       \
     if (expr == nullptr) {                                                   \
-      return MAKE_ERROR()                                                    \
-             << "'" << #expr << "' must be non-null";                        \
+      return MAKE_ERROR() << "'" << #expr << "' must be non-null";           \
     }                                                                        \
   } while (0)
 
-/* Newly Defined Macros */
 #define MAX_PORT_HDL_STRING_LEN 100
 
 DEFINE_string(tdi_sde_config_dir, "/var/run/stratum/tdi_config",
@@ -1696,7 +1696,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 
   // Commit new files to disk and build device profile for SDE to load.
   RETURN_IF_ERROR(RecursivelyCreateDir(FLAGS_tdi_sde_config_dir));
-  // Need to extend the lifetime of the path strings until the SDE read them.
+  // Need to extend the lifetime of the path strings until the SDE reads them.
   std::vector<std::unique_ptr<std::string>> path_strings;
   device_profile.num_p4_programs = device_config.programs_size();
   for (int i = 0; i < device_config.programs_size(); ++i) {
@@ -2811,10 +2811,10 @@ namespace {
 ::util::Status TdiSdeWrapper::ReadRegisters(
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 table_id, absl::optional<uint32> register_index,
-    std::vector<uint32>* register_indices, std::vector<uint64>* register_datas,
+    std::vector<uint32>* register_indices, std::vector<uint64>* register_values,
     absl::Duration timeout) {
   CHECK_RETURN_IF_FALSE(register_indices);
-  CHECK_RETURN_IF_FALSE(register_datas);
+  CHECK_RETURN_IF_FALSE(register_values);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   CHECK_RETURN_IF_FALSE(real_session);
@@ -2851,7 +2851,7 @@ namespace {
   }
 
   register_indices->resize(0);
-  register_datas->resize(0);
+  register_values->resize(0);
   for (size_t i = 0; i < keys.size(); ++i) {
     const std::unique_ptr<tdi::TableData>& table_data = datums[i];
     const std::unique_ptr<tdi::TableKey>& table_key = keys[i];
@@ -2874,7 +2874,7 @@ namespace {
         std::vector<uint64> register_data;
         RETURN_IF_TDI_ERROR(table_data->getValue(f1_field_id, &register_data));
         CHECK_RETURN_IF_FALSE(register_data.size() > 0);
-        register_datas->push_back(register_data[0]);
+        register_values->push_back(register_data[0]);
         break;
       }
       default:
@@ -2885,7 +2885,7 @@ namespace {
   }
 
   CHECK_EQ(register_indices->size(), keys.size());
-  CHECK_EQ(register_datas->size(), keys.size());
+  CHECK_EQ(register_values->size(), keys.size());
 
   return ::util::OkStatus();
 }
@@ -3180,9 +3180,9 @@ namespace {
 ::util::Status TdiSdeWrapper::GetActionProfileMembers(
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 table_id, int member_id, std::vector<int>* member_ids,
-    std::vector<std::unique_ptr<TableDataInterface>>* table_datas) {
+    std::vector<std::unique_ptr<TableDataInterface>>* table_values) {
   CHECK_RETURN_IF_FALSE(member_ids);
-  CHECK_RETURN_IF_FALSE(table_datas);
+  CHECK_RETURN_IF_FALSE(table_values);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   CHECK_RETURN_IF_FALSE(real_session);
@@ -3214,7 +3214,7 @@ namespace {
   }
 
   member_ids->resize(0);
-  table_datas->resize(0);
+  table_values->resize(0);
   for (size_t i = 0; i < keys.size(); ++i) {
     // Key: $sid
     uint32_t member_id = 0;
@@ -3223,11 +3223,11 @@ namespace {
 
     // Data: action params
     auto td = absl::make_unique<TableData>(std::move(datums[i]));
-    table_datas->push_back(std::move(td));
+    table_values->push_back(std::move(td));
   }
 
   CHECK_EQ(member_ids->size(), keys.size());
-  CHECK_EQ(table_datas->size(), keys.size());
+  CHECK_EQ(table_values->size(), keys.size());
 
   return ::util::OkStatus();
 }
@@ -3568,7 +3568,7 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 table_id,
     std::vector<std::unique_ptr<TableKeyInterface>>* table_keys,
-    std::vector<std::unique_ptr<TableDataInterface>>* table_datas) {
+    std::vector<std::unique_ptr<TableDataInterface>>* table_values) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   CHECK_RETURN_IF_FALSE(real_session);
@@ -3585,13 +3585,13 @@ namespace {
   RETURN_IF_ERROR(GetAllEntries(real_session->tdi_session_, *dev_tgt, table,
                                 &keys, &datums));
   table_keys->resize(0);
-  table_datas->resize(0);
+  table_values->resize(0);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     auto tk = absl::make_unique<TableKey>(std::move(keys[i]));
     auto td = absl::make_unique<TableData>(std::move(datums[i]));
     table_keys->push_back(std::move(tk));
-    table_datas->push_back(std::move(td));
+    table_values->push_back(std::move(td));
   }
 
   return ::util::OkStatus();

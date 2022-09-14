@@ -25,7 +25,7 @@ stratum_cc_library(
     name = "tdi_switch",
     srcs = ["tdi_switch.cc"],
     hdrs = ["tdi_switch.h"],
-    defines = ["P4OVS_CHANGES", "IPDK_TARGET"],
+    defines = ["P4OVS_CHANGES"],
     deps = [
         ":tdi_chassis_manager",
         ":tdi_sde_interface",
@@ -47,7 +47,7 @@ stratum_cc_library(
     name = "tdi_chassis_manager",
     srcs = ["tdi_chassis_manager.cc"],
     hdrs = ["tdi_chassis_manager.h"],
-    defines = ["P4OVS_CHANGES", "IPDK_TARGET"],
+    defines = ["P4OVS_CHANGES"],
     deps = [
         ":tdi_sde_interface",
         "//stratum/glue:integral_types",
@@ -77,7 +77,7 @@ stratum_cc_library(
 stratum_cc_test(
     name = "tdi_chassis_manager_test",
     srcs = ["tdi_chassis_manager_test.cc"],
-    defines = ["P4OVS_CHANGES", "IPDK_TARGET"],
+    defines = ["P4OVS_CHANGES"],
     deps = [
         ":tdi_chassis_manager",
         ":tdi_sde_mock",
@@ -106,7 +106,7 @@ stratum_cc_library(
     name = "tdi_chassis_manager_mock",
     testonly = 1,
     hdrs = ["tdi_chassis_manager_mock.h"],
-    defines = ["P4OVS_CHANGES", "IPDK_TARGET"],
+    defines = ["P4OVS_CHANGES"],
     arches = HOST_ARCHES,
     deps = [
         ":tdi_chassis_manager",
@@ -117,7 +117,7 @@ stratum_cc_library(
 stratum_cc_library(
     name = "tdi_sde_interface",
     hdrs = ["tdi_sde_interface.h"],
-    defines = ["P4OVS_CHANGES", "IPDK_TARGET"],
+    defines = ["P4OVS_CHANGES"],
     deps = [
         ":tdi_cc_proto",
         "//stratum/glue:integral_types",
@@ -134,15 +134,13 @@ stratum_cc_library(
     name = "tdi_sde_mock",
     testonly = 1,
     hdrs = ["tdi_sde_mock.h"],
-    defines = ["P4OVS_CHANGES", "IPDK_TARGET"],
+    defines = ["P4OVS_CHANGES"],
     deps = [
         ":tdi_sde_interface",
         "@com_google_googletest//:gtest",
     ],
 )
 
-# SDE_INSTALL_TAR is not defined
-# no such target: '@local_barefoot_bin://sde_version_9.2.0'
 stratum_cc_library(
     name = "tdi_sde_wrapper",
     srcs = ["tdi_sde_wrapper.cc"],
@@ -319,8 +317,6 @@ stratum_cc_test(
     ],
 )
 
-# SDE_INSTALL_TAR is not defined
-# target 'bfsde' not defined in package
 stratum_cc_library(
     name = "tdi_id_mapper",
     srcs = ["tdi_id_mapper.cc"],
@@ -349,8 +345,6 @@ stratum_cc_library(
     ],
 )
 
-# SDE_INSTALL_TAR is not defined
-# target 'bfsde' not defined in package
 stratum_cc_library(
     name = "macros",
     hdrs = ["macros.h"],

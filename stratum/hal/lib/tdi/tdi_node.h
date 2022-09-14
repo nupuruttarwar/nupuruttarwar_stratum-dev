@@ -28,7 +28,7 @@ namespace barefoot {
 
 // The TdiNode class encapsulates all per P4-native node/chip/ASIC
 // functionalities, primarily the flow managers. Calls made to this class are
-// processed and passed through to the TdiRt API.
+// processed and passed through to the TDI API.
 class TdiNode {
  public:
   virtual ~TdiNode();

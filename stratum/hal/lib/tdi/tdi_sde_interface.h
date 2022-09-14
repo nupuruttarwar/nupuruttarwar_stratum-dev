@@ -64,7 +64,7 @@ class TdiSdeInterface {
     struct HotplugConfigParams hotplug_config;
   };
 
-  // SessionInterface is a proxy class for TdiRt sessions. Most API calls require
+  // SessionInterface is a proxy class for TDI sessions. Most API calls require
   // an active session. It also allows batching requests for performance.
   class SessionInterface {
    public:
@@ -77,7 +77,7 @@ class TdiSdeInterface {
     virtual ::util::Status EndBatch() = 0;
   };
 
-  // TableKeyInterface is a proxy class for TdiRt table keys.
+  // TableKeyInterface is a proxy class for TDI table keys.
   class TableKeyInterface {
    public:
     virtual ~TableKeyInterface() {}
@@ -119,7 +119,7 @@ class TdiSdeInterface {
     virtual ::util::Status GetPriority(uint32* priority) const = 0;
   };
 
-  // TableKeyInterface is a proxy class for TdiRt table data.
+  // TableKeyInterface is a proxy class for TDI table data.
   class TableDataInterface {
    public:
     virtual ~TableDataInterface() {}
@@ -171,7 +171,7 @@ class TdiSdeInterface {
   virtual ::util::Status AddDevice(int device,
                                    const TdiDeviceConfig& device_config) = 0;
 
-  // Creates a new TdiRt session.
+  // Creates a new TDI session.
   virtual ::util::StatusOr<std::shared_ptr<SessionInterface>>
   CreateSession() = 0;
 
@@ -362,7 +362,7 @@ class TdiSdeInterface {
       std::vector<int>* max_pkt_lens) = 0;
 
   // Updates an indirect counter at the given index. The counter ID must be a
-  // TdiRt table ID, not P4Runtime.
+  // TDI table ID, not P4Runtime.
   // TODO(max): figure out optional counter data API, see TotW#163
   virtual ::util::Status WriteIndirectCounter(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -370,7 +370,7 @@ class TdiSdeInterface {
       absl::optional<uint64> packet_count) = 0;
 
   // Reads the data from an indirect counter. The counter ID must be a
-  // TdiRt table ID, not P4Runtime. Timeout specifies the maximum time to wait
+  // TDI table ID, not P4Runtime. Timeout specifies the maximum time to wait
   // for the counters to sync.
   // TODO(max): figure out optional counter data API, see TotW#163
   virtual ::util::Status ReadIndirectCounter(
@@ -382,7 +382,7 @@ class TdiSdeInterface {
       absl::Duration timeout) = 0;
 
   // Updates a register at the given index in a table. The table ID must be a
-  // TdiRt table ID, not P4Runtime. Timeout specifies the maximum time to wait
+  // TDI table ID, not P4Runtime. Timeout specifies the maximum time to wait
   // for the registers to sync.
   // TODO(max): figure out optional register index API, see TotW#163
   virtual ::util::Status WriteRegister(
@@ -391,16 +391,16 @@ class TdiSdeInterface {
       const std::string& register_data) = 0;
 
   // Reads the data from a register in a table, or all registers if index is 0.
-  // The table ID must be a TdiRt table ID, not P4Runtime.
+  // The table ID must be a TDI table ID, not P4Runtime.
   // TODO(max): figure out optional register index API, see TotW#163
   virtual ::util::Status ReadRegisters(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, absl::optional<uint32> register_index,
       std::vector<uint32>* register_indices,
-      std::vector<uint64>* register_datas, absl::Duration timeout) = 0;
+      std::vector<uint64>* register_values, absl::Duration timeout) = 0;
 
   // Updates an indirect meter at the given index. The table ID must be a
-  // TdiRt table ID, not P4Runtime.
+  // TDI table ID, not P4Runtime.
   // TODO(max): figure out optional register index API, see TotW#163
   virtual ::util::Status WriteIndirectMeter(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -408,7 +408,7 @@ class TdiSdeInterface {
       uint64 cir, uint64 cburst, uint64 pir, uint64 pburst) = 0;
 
   // Reads the data from an indirect meter, or all meters if index is 0.
-  // The table ID must be a TdiRt table ID, not P4Runtime.
+  // The table ID must be a TDI table ID, not P4Runtime.
   // TODO(max): figure out optional register index API, see TotW#163
   virtual ::util::Status ReadIndirectMeters(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -417,19 +417,19 @@ class TdiSdeInterface {
       std::vector<uint64>* cbursts, std::vector<uint64>* pirs,
       std::vector<uint64>* pbursts, std::vector<bool>* in_pps) = 0;
 
-  // Inserts an action profile member. The table ID must be a TdiRt table, not
+  // Inserts an action profile member. The table ID must be a TDI table, not
   // P4Runtime.
   virtual ::util::Status InsertActionProfileMember(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, int member_id, const TableDataInterface* table_data) = 0;
 
-  // Modifies an existing action profile member. The table ID must be a TdiRt
+  // Modifies an existing action profile member. The table ID must be a TDI
   // table, not P4Runtime.
   virtual ::util::Status ModifyActionProfileMember(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, int member_id, const TableDataInterface* table_data) = 0;
 
-  // Deletes an action profile member. The table ID must be a TdiRt
+  // Deletes an action profile member. The table ID must be a TDI
   // table, not P4Runtime. Returns an error if the member does not exist.
   virtual ::util::Status DeleteActionProfileMember(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -440,9 +440,9 @@ class TdiSdeInterface {
   virtual ::util::Status GetActionProfileMembers(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, int member_id, std::vector<int>* member_ids,
-      std::vector<std::unique_ptr<TableDataInterface>>* table_datas) = 0;
+      std::vector<std::unique_ptr<TableDataInterface>>* table_values) = 0;
 
-  // Inserts an action profile group. The table ID must be a TdiRt table, not
+  // Inserts an action profile group. The table ID must be a TDI table, not
   // P4Runtime.
   virtual ::util::Status InsertActionProfileGroup(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -450,7 +450,7 @@ class TdiSdeInterface {
       const std::vector<uint32>& member_ids,
       const std::vector<bool>& member_status) = 0;
 
-  // Modifies an action profile group. The table ID must be a TdiRt table, not
+  // Modifies an action profile group. The table ID must be a TDI table, not
   // P4Runtime.
   virtual ::util::Status ModifyActionProfileGroup(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -458,7 +458,7 @@ class TdiSdeInterface {
       const std::vector<uint32>& member_ids,
       const std::vector<bool>& member_status) = 0;
 
-  // Deletes an action profile group. The table ID must be a TdiRt table, not
+  // Deletes an action profile group. The table ID must be a TDI table, not
   // P4Runtime.
   virtual ::util::Status DeleteActionProfileGroup(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
@@ -505,7 +505,7 @@ class TdiSdeInterface {
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id,
       std::vector<std::unique_ptr<TableKeyInterface>>* table_keys,
-      std::vector<std::unique_ptr<TableDataInterface>>* table_datas) = 0;
+      std::vector<std::unique_ptr<TableDataInterface>>* table_values) = 0;
 
   // Sets the default table entry (action) for a table.
   virtual ::util::Status SetDefaultTableEntry(
@@ -523,15 +523,15 @@ class TdiSdeInterface {
       uint32 table_id, TableDataInterface* table_data) = 0;
 
   // Synchronizes the driver cached counter values with the current hardware
-  // state for a given TdiRt table.
+  // state for a given TDI table.
   virtual ::util::Status SynchronizeCounters(
       int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
       uint32 table_id, absl::Duration timeout) = 0;
 
-  // Returns the equivalent TdiRt ID for the given P4RT ID.
+  // Returns the equivalent TDI ID for the given P4RT ID.
   virtual ::util::StatusOr<uint32> GetTdiRtId(uint32 p4info_id) const = 0;
 
-  // Returns the equivalent P4RT ID for the given TdiRt ID.
+  // Returns the equivalent P4RT ID for the given TDI ID.
   virtual ::util::StatusOr<uint32> GetP4InfoId(uint32 bfrt_id) const = 0;
 
   // Gets the action selector ID of an action profile.

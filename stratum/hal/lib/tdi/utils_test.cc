@@ -196,10 +196,10 @@ TEST(ConvertPriorityTest, ToAndFromP4Runtime) {
   auto tdi_priority = ConvertPriorityFromP4rtToTdi(kP4rtPriority);
   EXPECT_OK(tdi_priority);
   EXPECT_EQ(tdi_priority.ValueOrDie(), 0xfffffe);
-  auto p4rt_priority_from_tdirt =
+  auto p4rt_priority_from_tdi =
       ConvertPriorityFromTdiToP4rt(tdi_priority.ValueOrDie());
-  EXPECT_OK(p4rt_priority_from_tdirt);
-  EXPECT_EQ(kP4rtPriority, p4rt_priority_from_tdirt.ValueOrDie());
+  EXPECT_OK(p4rt_priority_from_tdi);
+  EXPECT_EQ(kP4rtPriority, p4rt_priority_from_tdi.ValueOrDie());
 }
 
 TEST(ConvertPriorityTest, ToAndFromTdi) {

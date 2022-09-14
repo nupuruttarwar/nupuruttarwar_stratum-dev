@@ -207,16 +207,16 @@ TdiActionProfileManager::CreateInstance(TdiSdeInterface* tdi_sde_interface,
       << "Reading all action profiles is not supported yet.";
 
   std::vector<int> member_ids;
-  std::vector<std::unique_ptr<TdiSdeInterface::TableDataInterface>> table_datas;
+  std::vector<std::unique_ptr<TdiSdeInterface::TableDataInterface>> table_values;
   RETURN_IF_ERROR(tdi_sde_interface_->GetActionProfileMembers(
       device_, session, bfrt_table_id, action_profile_member.member_id(),
-      &member_ids, &table_datas));
+      &member_ids, &table_values));
 
   ::p4::v1::ReadResponse resp;
   for (size_t i = 0; i < member_ids.size(); ++i) {
     const int member_id = member_ids[i];
     const std::unique_ptr<TdiSdeInterface::TableDataInterface>& table_data =
-        table_datas[i];
+        table_values[i];
 
     ::p4::v1::ActionProfileMember result;
     ASSIGN_OR_RETURN(auto action_profile_id,

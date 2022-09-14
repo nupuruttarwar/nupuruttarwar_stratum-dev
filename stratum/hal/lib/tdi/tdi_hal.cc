@@ -84,7 +84,7 @@ int TdiHal::pipe_read_fd_ = -1;
 int TdiHal::pipe_write_fd_ = -1;
 
 TdiHal::TdiHal(OperationMode mode, SwitchInterface* switch_interface,
-                 AuthPolicyChecker* auth_policy_checker)
+               AuthPolicyChecker* auth_policy_checker)
     : mode_(mode),
       switch_interface_(ABSL_DIE_IF_NULL(switch_interface)),
       auth_policy_checker_(ABSL_DIE_IF_NULL(auth_policy_checker)),
@@ -216,10 +216,10 @@ TdiHal::~TdiHal() {
     external_server_ = builder.BuildAndStart();
     if (external_server_ == nullptr) {
       return MAKE_ERROR(ERR_INTERNAL)
-             << "Failed to start Stratum external facing services. This is an "
+             << "Failed to start Stratum external-facing services. This is an "
              << "internal error.";
     }
-    LOG(ERROR) << "Stratum external facing services are listening to "
+    LOG(ERROR) << "Stratum external-facing services are listening to "
                << absl::StrJoin(external_stratum_urls, ", ") << ", "
                << FLAGS_local_stratum_url << "...";
   }
@@ -242,8 +242,8 @@ void TdiHal::HandleSignal(int value) {
 }
 
 TdiHal* TdiHal::CreateSingleton(OperationMode mode,
-                                  SwitchInterface* switch_interface,
-                                  AuthPolicyChecker* auth_policy_checker) {
+                                SwitchInterface* switch_interface,
+                                AuthPolicyChecker* auth_policy_checker) {
   absl::WriterMutexLock l(&init_lock_);
   if (!singleton_) {
     singleton_ = new TdiHal(mode, switch_interface, auth_policy_checker);

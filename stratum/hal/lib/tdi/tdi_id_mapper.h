@@ -24,20 +24,20 @@ namespace stratum {
 namespace hal {
 namespace barefoot {
 
-// A helper class that convert IDs between P4Runtime and TdiRt.
+// A helper class that convert IDs between P4Runtime and TDI.
 class TdiIdMapper {
  public:
   // Initialize pipeline information
-  // This function creates a mapping between P4Info and TdiRt
+  // This function creates a mapping between P4Info and TDI
   ::util::Status PushForwardingPipelineConfig(const TdiDeviceConfig& config,
                                               const tdi::TdiInfo* tdi_info)
       LOCKS_EXCLUDED(lock_);
 
-  // Maps a P4Info ID to a TdiRt ID
+  // Maps a P4Info ID to a TDI ID
   ::util::StatusOr<uint32> GetTdiRtId(uint32 p4info_id) const
       LOCKS_EXCLUDED(lock_);
 
-  // Maps a TdiRt ID to a P4Info ID
+  // Maps a TDI ID to a P4Info ID
   ::util::StatusOr<uint32> GetP4InfoId(tdi_id_t tdi_id) const
       LOCKS_EXCLUDED(lock_);
 
@@ -72,15 +72,15 @@ class TdiIdMapper {
   // Reader-writer lock used to protect access to mapping.
   mutable absl::Mutex lock_;
 
-  // Maps from tdirt ID to P4Runtime ID and viceversa.
+  // Maps from TDI ID to P4Runtime ID and vice versa.
   absl::flat_hash_map<tdi_id_t, uint32> tdi_to_p4info_id_ GUARDED_BY(lock_);
   absl::flat_hash_map<uint32, tdi_id_t> p4info_to_tdi_id_ GUARDED_BY(lock_);
 
-  // Map for getting an ActionSelector TdiRt ID from an ActionProfile TdiRt ID.
+  // Map for getting an ActionSelector TDI ID from an ActionProfile TDI ID.
   absl::flat_hash_map<tdi_id_t, tdi_id_t> act_profile_to_selector_mapping_
       GUARDED_BY(lock_);
 
-  // Map for getting an ActionProfile TdiRt ID from an ActionSelector TdiRt ID.
+  // Map for getting an ActionProfile TDI ID from an ActionSelector TDI ID.
   absl::flat_hash_map<tdi_id_t, tdi_id_t> act_selector_to_profile_mapping_
       GUARDED_BY(lock_);
 };

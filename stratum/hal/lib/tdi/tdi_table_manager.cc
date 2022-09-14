@@ -765,30 +765,30 @@ TdiTableManager::ReadDirectCounterEntry(
     optional_register_index = register_entry.index().index();
   }
 
-  // TODO(max): we don't translate p4rt id to tdirt here?
+  // TODO(max): we don't translate p4rt id to TDI here?
   std::vector<uint32> register_indices;
-  std::vector<uint64> register_datas;
+  std::vector<uint64> register_values;
   RETURN_IF_ERROR(tdi_sde_interface_->ReadRegisters(
       device_, session, register_entry.register_id(), optional_register_index,
-      &register_indices, &register_datas,
+      &register_indices, &register_values,
       absl::Milliseconds(FLAGS_tdi_table_sync_timeout_ms)));
 
   ::p4::v1::ReadResponse resp;
   for (size_t i = 0; i < register_indices.size(); ++i) {
     const uint32 register_index = register_indices[i];
-    const uint64 register_data = register_datas[i];
+    const uint64 register_datum = register_values[i];
     ::p4::v1::RegisterEntry result;
 
     result.set_register_id(register_entry.register_id());
     result.mutable_index()->set_index(register_index);
     // TODO(max): Switch to tuple form, once compiler support landed.
     // ::p4::v1::P4StructLike register_tuple;
-    // for (const auto& data : register_data) {
+    // for (const auto& data : register_datum) {
     //   LOG(INFO) << data;
     //   register_tuple.add_members()->set_bitstring(Uint64ToByteStream(data));
     // }
     // *result.mutable_data()->mutable_tuple() = register_tuple;
-    result.mutable_data()->set_bitstring(Uint64ToByteStream(register_data));
+    result.mutable_data()->set_bitstring(Uint64ToByteStream(register_datum));
 
     *resp.add_entities()->mutable_register_entry() = result;
   }

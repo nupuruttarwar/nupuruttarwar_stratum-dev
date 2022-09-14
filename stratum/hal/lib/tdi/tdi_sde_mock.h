@@ -217,7 +217,7 @@ class TdiSdeMock : public TdiSdeInterface {
                      std::shared_ptr<TdiSdeInterface::SessionInterface> session,
                      uint32 table_id, absl::optional<uint32> register_index,
                      std::vector<uint32>* register_indices,
-                     std::vector<uint64>* register_datas,
+                     std::vector<uint64>* register_values,
                      absl::Duration timeout));
   MOCK_METHOD9(
       WriteIndirectMeter,
@@ -257,7 +257,7 @@ class TdiSdeMock : public TdiSdeInterface {
       ::util::Status(
           int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
           uint32 table_id, int member_id, std::vector<int>* member_ids,
-          std::vector<std::unique_ptr<TableDataInterface>>* table_datas));
+          std::vector<std::unique_ptr<TableDataInterface>>* table_values));
   MOCK_METHOD7(
       InsertActionProfileGroup,
       ::util::Status(int device,
@@ -320,7 +320,7 @@ class TdiSdeMock : public TdiSdeInterface {
           int device, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
           uint32 table_id,
           std::vector<std::unique_ptr<TableKeyInterface>>* table_keys,
-          std::vector<std::unique_ptr<TableDataInterface>>* table_datas));
+          std::vector<std::unique_ptr<TableDataInterface>>* table_values));
   MOCK_METHOD4(
       SetDefaultTableEntry,
       ::util::Status(int device,

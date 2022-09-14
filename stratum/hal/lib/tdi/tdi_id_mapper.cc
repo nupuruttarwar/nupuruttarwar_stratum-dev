@@ -11,7 +11,15 @@
 #include "stratum/glue/gtl/map_util.h"
 #include "stratum/hal/lib/tdi/tdi_constants.h"
 #include "stratum/hal/lib/tdi/macros.h"
-#include "tdi_rt/tdi_rt_defs.h"
+
+// NOTE: This module should be target-neutral.
+#if defined(TOFINO_TARGET)
+  #include "tofino/tdi_tofino_defs.h"
+#elif defined(DPDK_TARGET)
+  #include "tdi_rt/tdi_rt_defs.h"
+#else
+  #error P4 target not defined!
+#endif
 
 namespace stratum {
 namespace hal {
@@ -31,14 +39,14 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
     const TdiDeviceConfig& config, const tdi::TdiInfo* tdi_info) {
   absl::WriterMutexLock l(&lock_);
 
-  // Builds mapping between p4info and tdirt info
+  // Builds mapping between p4info and TDI info
   // In most cases, such as table id, we don't really need to map
-  // from p4info ID to tdirt ID.
+  // from p4info ID to TDI ID.
   // However for some cases, like externs which does not exists
   // in native P4 core headers, the frontend compiler will
-  // generate different IDs between p4info and tdirt info.
+  // generate different IDs between p4info and TDI info.
   for (const auto& program : config.programs()) {
-    // Try to find P4 tables from TDIRT info
+    // Try to find P4 tables from TDI info
     for (const auto& table : program.p4info().tables()) {
       RETURN_IF_ERROR(BuildMapping(table.preamble().id(),
                                    table.preamble().name(), tdi_info));
@@ -61,7 +69,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
     // Externs
     for (const auto& p4extern : program.p4info().externs()) {
       // TODO(Yi): Now we only support ActionProfile and ActionSelector
-      // Things like DirectCounter are not listed as a table in tdirt.json
+      // Things like DirectCounter are not listed as a table in tdi.json
       if (p4extern.extern_type_id() != kTnaExternActionProfileId &&
           p4extern.extern_type_id() != kTnaExternActionSelectorId) {
         continue;
@@ -100,20 +108,20 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
                                           std::string p4info_name,
                                           const tdi::TdiInfo* tdi_info) {
   const tdi::Table* table;
-  auto tdi_status_t = tdi_info->tableFromIdGet(p4info_id, &table);
+  auto tdi_status = tdi_info->tableFromIdGet(p4info_id, &table);
 
-  if (tdi_status_t == TDI_SUCCESS) {
-    // Both p4info and tdirt json uses the same id for a specific
+  if (tdi_status == TDI_SUCCESS) {
+    // Both p4info and TDI json use the same id for a specific
     // table/action selector/profile
     p4info_to_tdi_id_[p4info_id] = p4info_id;
     tdi_to_p4info_id_[p4info_id] = p4info_id;
     return ::util::OkStatus();
   }
 
-  // Unable to find table by id, because tdirt uses a different id, we
+  // Unable to find table by id because TDI uses a different id; we
   // can try to search it by name.
-  tdi_status_t = tdi_info->tableFromNameGet(p4info_name, &table);
-  if (tdi_status_t == TDI_SUCCESS) {
+  tdi_status = tdi_info->tableFromNameGet(p4info_name, &table);
+  if (tdi_status == TDI_SUCCESS) {
     // Table can be found with the given name, but they uses different IDs
     // We need to store mapping so we can map them later.
     tdi_id_t table_id = table->tableInfoGet()->idGet();
@@ -122,7 +130,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
     return ::util::OkStatus();
   }
 
-  // Special case: tdirt includes pipeline name as prefix(e.g., "pipe."), but
+  // Special case: TDI includes pipeline name as prefix (e.g., "pipe."), but
   // p4info doesn't. We need to scan all tables to see if there is a table
   // called "[pipeline name].[P4 info table name]"
   std::vector<const tdi::Table*> tdi_tables;
@@ -139,7 +147,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
     }
   }
   return MAKE_ERROR(ERR_INTERNAL)
-         << "Unable to find tdirt ID for P4Info entity " << p4info_name
+         << "Unable to find TDI ID for P4Info entity " << p4info_name
          << " with ID " << p4info_id << ".";
 }
 
@@ -187,7 +195,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
     return MAKE_ERROR(ERR_INTERNAL) << e.what();
   }
 
-  // Searching all action profile and selector tables from tdirt.json
+  // Searching all action profile and selector tables from tdi.json
   absl::flat_hash_map<std::string, tdi_id_t> act_prof_tdi_ids;
   absl::flat_hash_map<std::string, tdi_id_t> selector_tdi_ids;
   std::vector<const tdi::Table*> tdi_tables;
@@ -195,11 +203,15 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
   for (const auto* table : tdi_tables) {
     std::string table_name;
     tdi_id_t table_id;
+    // TODO: tdi_rt_table_type_e is DPDK-specific
+    // TDI table types should be target-neutral.
     auto table_type = static_cast<tdi_rt_table_type_e>(
 	table->tableInfoGet()->tableTypeGet());
     table_id = table->tableInfoGet()->idGet();
     table_name = table->tableInfoGet()->nameGet();
 
+    // TODO: TDI_RT_TABLE_TYPE_ACTION_PROFILE is DPDK-specific
+    // TDI table types should be target-neutral.
     if (table_type == TDI_RT_TABLE_TYPE_ACTION_PROFILE) {
       CHECK_RETURN_IF_FALSE(
           gtl::InsertIfNotPresent(&act_prof_tdi_ids, table_name, table_id))
@@ -249,14 +261,14 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
 ::util::StatusOr<uint32> TdiIdMapper::GetTdiRtId(uint32 p4info_id) const {
   absl::ReaderMutexLock l(&lock_);
   CHECK_RETURN_IF_FALSE(gtl::ContainsKey(p4info_to_tdi_id_, p4info_id))
-      << "Unable to find tdirt id from p4info id: " << p4info_id;
+      << "Unable to find TDI id from p4info id: " << p4info_id;
   return gtl::FindOrDie(p4info_to_tdi_id_, p4info_id);
 }
 
 ::util::StatusOr<uint32> TdiIdMapper::GetP4InfoId(tdi_id_t tdi_id) const {
   absl::ReaderMutexLock l(&lock_);
   CHECK_RETURN_IF_FALSE(gtl::ContainsKey(tdi_to_p4info_id_, tdi_id))
-      << "Unable to find p4info id from tdirt id: " << tdi_id;
+      << "Unable to find p4info id from TDI id: " << tdi_id;
   return gtl::FindOrDie(tdi_to_p4info_id_, tdi_id);
 }
 

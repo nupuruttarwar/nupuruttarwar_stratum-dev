@@ -48,7 +48,7 @@ LoggingConfig GetCurrentLogLevel();
 bool SetLogLevel(const LoggingConfig& logging_config);
 }  // namespace stratum
 
-// ostream overload for std::nulptr_t for C++11
+// ostream overload for std::nullptr_t for C++11
 // see: https://stackoverflow.com/a/46256849
 #if __cplusplus == 201103L
 #include <cstddef>

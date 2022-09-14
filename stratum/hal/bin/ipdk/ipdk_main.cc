@@ -87,9 +87,9 @@ namespace barefoot {
   auto ipdk_switch = IpdkSwitch::CreateInstance(
       phal, chassis_manager.get(), sde_wrapper, device_id_to_ipdk_node);
 
-  // Create the 'Hal' class instance.
   auto auth_policy_checker = AuthPolicyChecker::CreateInstance();
 
+  // Create the 'Hal' class instance.
   auto* hal = IpdkHal::CreateSingleton(
       stratum::hal::OPERATION_MODE_STANDALONE, ipdk_switch.get(),
       auth_policy_checker.get());
