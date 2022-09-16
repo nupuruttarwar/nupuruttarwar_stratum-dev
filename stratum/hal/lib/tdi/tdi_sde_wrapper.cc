@@ -20,13 +20,13 @@
 #include "lld/lld_sku.h"
 #endif
 
-#include "stratum/glue/gtl/cleanup.h"
 #include "stratum/glue/gtl/map_util.h"
 #include "stratum/glue/gtl/stl_util.h"
 #include "stratum/glue/integral_types.h"
 #include "stratum/glue/logging.h"
 #include "stratum/glue/status/status.h"
 #include "stratum/glue/status/statusor.h"
+#include "absl/cleanup/cleanup.h"
 #include "stratum/hal/lib/common/common.pb.h"
 #include "stratum/hal/lib/p4/utils.h"
 #include "stratum/hal/lib/tdi/tdi_constants.h"
@@ -175,7 +175,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
         break;
       }
       default:
-        RETURN_ERROR(ERR_INTERNAL)
+        return MAKE_ERROR(ERR_INTERNAL)
             << "Unknown key_type: " << static_cast<int>(key_type) << ".";
     }
 
@@ -249,7 +249,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
         break;
       }
       default:
-        RETURN_ERROR(ERR_INTERNAL)
+        return MAKE_ERROR(ERR_INTERNAL)
             << "Unknown data_type: " << static_cast<int>(data_type) << ".";
     }
 
@@ -277,7 +277,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
   field_id = keyFieldInfo->idGet();
   data_type = keyFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_UINT64)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_UINT64)
       << "Requested uint64 but field " << field_name
       << " has type " << static_cast<int>(data_type);
 
@@ -302,7 +302,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
   field_id = keyFieldInfo->idGet();
   data_type = keyFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_UINT64)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_UINT64)
       << "Setting uint64 but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_key->setValue(field_id, key_field_value));
@@ -321,7 +321,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
   field_id = keyFieldInfo->idGet();
   data_type = keyFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_UINT64)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_UINT64)
       << "Setting uint64 but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_key->setValue(field_id, value));
@@ -343,7 +343,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_UINT64)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_UINT64)
       << "Requested uint64 but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data.getValue(field_id, field_value));
@@ -365,7 +365,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_STRING)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_STRING)
       << "Requested string but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data.getValue(field_id, field_value));
@@ -388,7 +388,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_BOOL)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_BOOL)
       << "Requested bool but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data.getValue(field_id, field_value));
@@ -411,7 +411,7 @@ template <typename T>
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_INT_ARR ||
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_INT_ARR ||
                         data_type == TDI_FIELD_DATA_TYPE_BOOL_ARR)
       << "Requested array but field has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data.getValue(field_id, field_values));
@@ -433,7 +433,7 @@ template <typename T>
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_UINT64)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_UINT64)
       << "Setting uint64 but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data->setValue(field_id, value));
@@ -455,7 +455,7 @@ template <typename T>
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_STRING)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_STRING)
       << "Setting string but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data->setValue(field_id, field_value));
@@ -477,7 +477,7 @@ template <typename T>
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
 
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_BOOL)
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_BOOL)
       << "Setting bool but field " << field_name
       << " has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data->setValue(field_id, field_value));
@@ -500,7 +500,7 @@ template <typename T>
   RETURN_IF_NULL(dataFieldInfo);
   field_id = dataFieldInfo->idGet();
   data_type = dataFieldInfo->dataTypeGet();
-  CHECK_RETURN_IF_FALSE(data_type == TDI_FIELD_DATA_TYPE_INT_ARR ||
+  RET_CHECK(data_type == TDI_FIELD_DATA_TYPE_INT_ARR ||
                         data_type == TDI_FIELD_DATA_TYPE_BOOL_ARR)
       << "Requested array but field has type " << static_cast<int>(data_type);
   RETURN_IF_TDI_ERROR(table_data->setValue(field_id, field_value));
@@ -513,8 +513,8 @@ template <typename T>
     tdi::Target tdi_dev_target, const tdi::Table* table,
     std::vector<std::unique_ptr<tdi::TableKey>>* table_keys,
     std::vector<std::unique_ptr<tdi::TableData>>* table_datums) {
-  CHECK_RETURN_IF_FALSE(table_keys) << "table_keys is null";
-  CHECK_RETURN_IF_FALSE(table_datums) << "table_datums is null";
+  RET_CHECK(table_keys) << "table_keys is null";
+  RET_CHECK(table_datums) << "table_datums is null";
 
   // Get number of entries. Some types of tables are preallocated and are always
   // "full". The SDE does not support querying the usage on these.
@@ -915,8 +915,8 @@ TableKey::CreateTableKey(const tdi::TdiInfo* tdi_info_, int table_id) {
 }
 
 ::util::Status TableData::GetCounterData(uint64* bytes, uint64* packets) const {
-  CHECK_RETURN_IF_FALSE(bytes);
-  CHECK_RETURN_IF_FALSE(packets);
+  RET_CHECK(bytes);
+  RET_CHECK(packets);
   tdi_id_t field_id_bytes = 0;
   tdi_id_t field_id_packets = 0;
   const tdi::DataFieldInfo *dataFieldInfoPackets;
@@ -943,7 +943,7 @@ TableKey::CreateTableKey(const tdi::TdiInfo* tdi_info_, int table_id) {
 }
 
 ::util::Status TableData::GetActionId(int* action_id) const {
-  CHECK_RETURN_IF_FALSE(action_id);
+  RET_CHECK(action_id);
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(table_data_->getParent(&table));
   *action_id = table_data_->actionIdGet();
@@ -1013,7 +1013,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
     case kHundredGigBps:
       return BF_SPEED_100G;
     default:
-      RETURN_ERROR(ERR_INVALID_PARAM) << "Unsupported port speed.";
+      return MAKE_ERROR(ERR_INVALID_PARAM) << "Unsupported port speed.";
   }
 }
 #endif
@@ -1028,7 +1028,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
     case TRI_STATE_FALSE:
       return 2;
     default:
-      RETURN_ERROR(ERR_INVALID_PARAM) << "Invalid autoneg state.";
+      return MAKE_ERROR(ERR_INVALID_PARAM) << "Invalid autoneg state.";
   }
 }
 
@@ -1043,7 +1043,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
     // we have to "guess" the FEC type to use based on the port speed.
     switch (speed_bps) {
       case kOneGigBps:
-        RETURN_ERROR(ERR_INVALID_PARAM) << "Invalid FEC mode for 1Gbps mode.";
+        return MAKE_ERROR(ERR_INVALID_PARAM) << "Invalid FEC mode for 1Gbps mode.";
       case kTenGigBps:
       case kFortyGigBps:
         return BF_FEC_TYP_FIRECODE;
@@ -1054,10 +1054,10 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
       case kFourHundredGigBps:
         return BF_FEC_TYP_REED_SOLOMON;
       default:
-        RETURN_ERROR(ERR_INVALID_PARAM) << "Unsupported port speed.";
+        return MAKE_ERROR(ERR_INVALID_PARAM) << "Unsupported port speed.";
     }
   }
-  RETURN_ERROR(ERR_INVALID_PARAM) << "Invalid FEC mode.";
+  return MAKE_ERROR(ERR_INVALID_PARAM) << "Invalid FEC mode.";
 }
 
 // P4OVS_CHANGES: 'Bf' is a Barefoot-specific name.
@@ -1069,7 +1069,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
     case LOOPBACK_STATE_MAC:
       return BF_LPBK_MAC_NEAR;
     default:
-      RETURN_ERROR(ERR_INVALID_PARAM)
+      return MAKE_ERROR(ERR_INVALID_PARAM)
           << "Unsupported loopback mode: " << LoopbackState_Name(loopback_mode)
           << ".";
   }
@@ -1389,7 +1389,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 #ifndef P4OVS_CHANGES
 // P4OVS_CHANGES: 'bf_' and 'Bf' are Barefoot-specific.
   if (mtu < 0) {
-    RETURN_ERROR(ERR_INVALID_PARAM) << "Invalid MTU value.";
+    return MAKE_ERROR(ERR_INVALID_PARAM) << "Invalid MTU value.";
   }
   if (mtu == 0) mtu = kBfDefaultMtu;
   RETURN_IF_TDI_ERROR(bf_pal_port_mtu_set(
@@ -1429,7 +1429,7 @@ bool TdiSdeWrapper::IsValidPort(int device, int port) {
 #if defined(TOFINO_TARGET)
   bool is_sw_model = true;
   auto bf_status = bf_pal_pltfm_type_get(device, &is_sw_model);
-  CHECK_RETURN_IF_FALSE(bf_status == BF_SUCCESS)
+  RET_CHECK(bf_status == BF_SUCCESS)
       << "Error getting software model status.";
   return is_sw_model;
 #elif defined(DPDK_TARGET)
@@ -1571,7 +1571,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 ::util::StatusOr<uint32> TdiSdeWrapper::GetPortIdFromPortKey(
     int device, const PortKey& port_key) {
   const int port = port_key.port;
-  CHECK_RETURN_IF_FALSE(port >= 0)
+  RET_CHECK(port >= 0)
       << "Port ID must be non-negative. Attempted to get port " << port
       << " on dev " << device << ".";
 
@@ -1584,12 +1584,12 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
   //     Otherwise, port is already 0 in the non-channelized case
   const int channel =
       (port_key.channel > 0) ? port_key.channel - 1 : port_key.channel;
-  CHECK_RETURN_IF_FALSE(channel >= 0)
+  RET_CHECK(channel >= 0)
       << "Channel must be set for port " << port << " on dev " << device << ".";
 
   char port_string[MAX_PORT_HDL_STRING_LEN];
   int r = snprintf(port_string, sizeof(port_string), "%d/%d", port, channel);
-  CHECK_RETURN_IF_FALSE(r > 0 && r < sizeof(port_string))
+  RET_CHECK(r > 0 && r < sizeof(port_string))
       << "Failed to build port string for port " << port << " channel "
       << channel << " on dev " << device << ".";
 
@@ -1603,7 +1603,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
   int port = 0;
 #ifndef P4OVS_CHANGES
   int port = p4_devport_mgr_pcie_cpu_port_get(device);
-  CHECK_RETURN_IF_FALSE(port != -1);
+  RET_CHECK(port != -1);
 #endif
   return port;
 }
@@ -1611,7 +1611,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 ::util::Status TdiSdeWrapper::SetTmCpuPort(int device, int port) {
 
 #ifndef P4OVS_CHANGES
-  CHECK_RETURN_IF_FALSE(p4_pd_tm_set_cpuport(device, port) == 0)
+  RET_CHECK(p4_pd_tm_set_cpuport(device, port) == 0)
       << "Unable to set CPU port " << port << " on device " << device;
 #endif
   return ::util::OkStatus();
@@ -1634,9 +1634,9 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 ::util::Status TdiSdeWrapper::InitializeSde(
     const std::string& sde_install_path, const std::string& sde_config_file,
     bool run_in_background) {
-  CHECK_RETURN_IF_FALSE(sde_install_path != "")
+  RET_CHECK(sde_install_path != "")
       << "sde_install_path is required";
-  CHECK_RETURN_IF_FALSE(sde_config_file != "") << "sde_config_file is required";
+  RET_CHECK(sde_config_file != "") << "sde_config_file is required";
 
   // Parse bf_switchd arguments.
   auto switchd_main_ctx = absl::make_unique<bf_switchd_context_t>();
@@ -1685,7 +1685,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
   const tdi::Device *device = nullptr;
   absl::WriterMutexLock l(&data_lock_);
 
-  CHECK_RETURN_IF_FALSE(device_config.programs_size() > 0);
+  RET_CHECK(device_config.programs_size() > 0);
 
   tdi_id_mapper_.reset();
 
@@ -1714,7 +1714,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
     p4_program->bfrt_json_file = &(*tdi_path)[0];
     p4_program->num_p4_pipelines = program.pipelines_size();
     path_strings.emplace_back(std::move(tdi_path));
-    CHECK_RETURN_IF_FALSE(program.pipelines_size() > 0);
+    RET_CHECK(program.pipelines_size() > 0);
     for (int j = 0; j < program.pipelines_size(); ++j) {
       const auto& pipeline = program.pipelines(j);
       const std::string pipeline_path =
@@ -1735,7 +1735,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
       path_strings.emplace_back(std::move(config_path));
       path_strings.emplace_back(std::move(context_path));
 
-      CHECK_RETURN_IF_FALSE(pipeline.scope_size() <= MAX_P4_PIPELINES);
+      RET_CHECK(pipeline.scope_size() <= MAX_P4_PIPELINES);
       pipeline_profile->num_pipes_in_scope = pipeline.scope_size();
       for (int p = 0; p < pipeline.scope_size(); ++p) {
         const auto& scope = pipeline.scope(p);
@@ -1751,17 +1751,17 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
   // Set SDE log levels for modules of interest.
   // TODO(max): create story around SDE logs. How to get them into glog? What
   // levels to enable for which modules?
-  CHECK_RETURN_IF_FALSE(
+  RET_CHECK(
       bf_sys_log_level_set(BF_MOD_BFRT, BF_LOG_DEST_STDOUT, BF_LOG_WARN) == 0);
-  CHECK_RETURN_IF_FALSE(
+  RET_CHECK(
       bf_sys_log_level_set(BF_MOD_PKT, BF_LOG_DEST_STDOUT, BF_LOG_WARN) == 0);
-  CHECK_RETURN_IF_FALSE(
+  RET_CHECK(
       bf_sys_log_level_set(BF_MOD_PIPE, BF_LOG_DEST_STDOUT, BF_LOG_WARN) == 0);
 #ifndef P4OVS_CHANGES
   stat_mgr_enable_detail_trace = false;
 #endif
   if (VLOG_IS_ON(2)) {
-    CHECK_RETURN_IF_FALSE(bf_sys_log_level_set(BF_MOD_PIPE, BF_LOG_DEST_STDOUT,
+    RET_CHECK(bf_sys_log_level_set(BF_MOD_PIPE, BF_LOG_DEST_STDOUT,
                                                BF_LOG_WARN) == 0);
 #ifndef P4OVS_CHANGES
     stat_mgr_enable_detail_trace = true;
@@ -1880,7 +1880,7 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
     bf_dev_id_t device, bf_pkt* pkt, bf_pkt_rx_ring_t rx_ring) {
   absl::ReaderMutexLock l(&packet_rx_callback_lock_);
   auto rx_writer = gtl::FindOrNull(device_to_packet_rx_writer_, device);
-  CHECK_RETURN_IF_FALSE(rx_writer)
+  RET_CHECK(rx_writer)
       << "No Rx callback registered for device id " << device << ".";
 
   std::string buffer(reinterpret_cast<const char*>(bf_pkt_get_pkt_data(pkt)),
@@ -1972,7 +1972,7 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session) {
   if (VLOG_IS_ON(2)) {
     auto real_session = std::dynamic_pointer_cast<Session>(session);
-    CHECK_RETURN_IF_FALSE(real_session);
+    RET_CHECK(real_session);
 
     const tdi::Table* table;
     const tdi::Device *device = nullptr;
@@ -2016,7 +2016,7 @@ namespace {
 ::util::StatusOr<uint32> TdiSdeWrapper::GetFreeMulticastNodeId(
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session) {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2062,7 +2062,7 @@ namespace {
     }
   }
 
-  RETURN_ERROR(ERR_TABLE_FULL) << "Could not find free multicast node id.";
+  return MAKE_ERROR(ERR_TABLE_FULL) << "Could not find free multicast node id.";
 }
 
 ::util::StatusOr<uint32> TdiSdeWrapper::CreateMulticastNode(
@@ -2072,7 +2072,7 @@ namespace {
   ::absl::ReaderMutexLock l(&data_lock_);
 
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;  // PRE node table.
   tdi_id_t table_id;
@@ -2113,7 +2113,7 @@ namespace {
   ::absl::ReaderMutexLock l(&data_lock_);
 
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2146,7 +2146,7 @@ namespace {
     const std::vector<uint32>& mc_node_ids) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2175,12 +2175,12 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 mc_node_id, int* replication_id, std::vector<uint32>* lag_ids,
     std::vector<uint32>* ports) {
-  CHECK_RETURN_IF_FALSE(replication_id);
-  CHECK_RETURN_IF_FALSE(lag_ids);
-  CHECK_RETURN_IF_FALSE(ports);
+  RET_CHECK(replication_id);
+  RET_CHECK(lag_ids);
+  RET_CHECK(ports);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2222,7 +2222,7 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 group_id, const std::vector<uint32>& mc_node_ids, bool insert) {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;  // PRE MGID table.
   tdi_id_t table_id;
@@ -2294,7 +2294,7 @@ namespace {
     uint32 group_id) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2318,11 +2318,11 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 group_id, std::vector<uint32>* group_ids,
     std::vector<std::vector<uint32>>* mc_node_ids) {
-  CHECK_RETURN_IF_FALSE(group_ids);
-  CHECK_RETURN_IF_FALSE(mc_node_ids);
+  RET_CHECK(group_ids);
+  RET_CHECK(mc_node_ids);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2376,7 +2376,7 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 session_id, int egress_port, int cos, int max_pkt_len, bool insert) {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   const tdi::Device *device = nullptr;
@@ -2451,7 +2451,7 @@ namespace {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   const tdi::DataFieldInfo *dataFieldInfo;
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(
@@ -2484,14 +2484,14 @@ namespace {
     uint32 session_id, std::vector<uint32>* session_ids,
     std::vector<int>* egress_ports, std::vector<int>* coss,
     std::vector<int>* max_pkt_lens) {
-  CHECK_RETURN_IF_FALSE(session_ids);
-  CHECK_RETURN_IF_FALSE(egress_ports);
-  CHECK_RETURN_IF_FALSE(coss);
-  CHECK_RETURN_IF_FALSE(max_pkt_lens);
+  RET_CHECK(session_ids);
+  RET_CHECK(egress_ports);
+  RET_CHECK(coss);
+  RET_CHECK(max_pkt_lens);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   const tdi::DataFieldInfo *dataFieldInfo;
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2550,13 +2550,13 @@ namespace {
     // Data: $session_enable
     bool session_enable;
     RETURN_IF_ERROR(GetFieldBool(*table_data, "$session_enable", &session_enable));
-    CHECK_RETURN_IF_FALSE(session_enable)
+    RET_CHECK(session_enable)
         << "Found a session that is not enabled.";
     // Data: $ucast_egress_port_valid
     bool ucast_egress_port_valid;
     RETURN_IF_ERROR(GetFieldBool(*table_data, "$ucast_egress_port_valid",
                              &ucast_egress_port_valid));
-    CHECK_RETURN_IF_FALSE(ucast_egress_port_valid)
+    RET_CHECK(ucast_egress_port_valid)
         << "Found a unicase egress port that is not set valid.";
   }
 
@@ -2575,7 +2575,7 @@ namespace {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   const tdi::DataFieldInfo *dataFieldInfo;
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(counter_id, &table));
@@ -2630,12 +2630,12 @@ namespace {
     std::vector<absl::optional<uint64>>* byte_counts,
     std::vector<absl::optional<uint64>>* packet_counts,
     absl::Duration timeout) {
-  CHECK_RETURN_IF_FALSE(counter_indices);
-  CHECK_RETURN_IF_FALSE(byte_counts);
-  CHECK_RETURN_IF_FALSE(packet_counts);
+  RET_CHECK(counter_indices);
+  RET_CHECK(byte_counts);
+  RET_CHECK(packet_counts);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -2735,7 +2735,7 @@ namespace {
     }
   }
 
-  RETURN_ERROR(ERR_INTERNAL) << "Could not find register data field id.";
+  return MAKE_ERROR(ERR_INTERNAL) << "Could not find register data field id.";
 
    return ::util::OkStatus();
 }
@@ -2747,7 +2747,7 @@ namespace {
     const std::string& register_data) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -2813,11 +2813,11 @@ namespace {
     uint32 table_id, absl::optional<uint32> register_index,
     std::vector<uint32>* register_indices, std::vector<uint64>* register_datas,
     absl::Duration timeout) {
-  CHECK_RETURN_IF_FALSE(register_indices);
-  CHECK_RETURN_IF_FALSE(register_datas);
+  RET_CHECK(register_indices);
+  RET_CHECK(register_datas);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   RETURN_IF_ERROR(SynchronizeRegisters(dev_id, session, table_id, timeout));
 
@@ -2873,12 +2873,12 @@ namespace {
         // fetching the data in an uint64 vector with one entry per pipe.
         std::vector<uint64> register_data;
         RETURN_IF_TDI_ERROR(table_data->getValue(f1_field_id, &register_data));
-        CHECK_RETURN_IF_FALSE(register_data.size() > 0);
+        RET_CHECK(register_data.size() > 0);
         register_datas->push_back(register_data[0]);
         break;
       }
       default:
-        RETURN_ERROR(ERR_INVALID_PARAM)
+        return MAKE_ERROR(ERR_INVALID_PARAM)
             << "Unsupported register data type " << static_cast<int>(data_type)
             << " for register in table " << table_id;
     }
@@ -2896,7 +2896,7 @@ namespace {
     uint64 cir, uint64 cburst, uint64 pir, uint64 pburst) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -2964,14 +2964,14 @@ namespace {
     std::vector<uint32>* meter_indices, std::vector<uint64>* cirs,
     std::vector<uint64>* cbursts, std::vector<uint64>* pirs,
     std::vector<uint64>* pbursts, std::vector<bool>* in_pps) {
-  CHECK_RETURN_IF_FALSE(meter_indices);
-  CHECK_RETURN_IF_FALSE(cirs);
-  CHECK_RETURN_IF_FALSE(cbursts);
-  CHECK_RETURN_IF_FALSE(pirs);
-  CHECK_RETURN_IF_FALSE(pbursts);
+  RET_CHECK(meter_indices);
+  RET_CHECK(cirs);
+  RET_CHECK(cbursts);
+  RET_CHECK(pirs);
+  RET_CHECK(pbursts);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -3059,7 +3059,7 @@ namespace {
         RETURN_IF_TDI_ERROR(table_data->getValue(field_id, &pburst));
         pbursts->push_back(pburst);
       } else {
-        RETURN_ERROR(ERR_INVALID_PARAM)
+        return MAKE_ERROR(ERR_INVALID_PARAM)
             << "Unknown meter field " << field_name
             << " in meter with id " << table_id << ".";
       }
@@ -3081,9 +3081,9 @@ namespace {
     uint32 table_id, int member_id, const TableDataInterface* table_data,
     bool insert) {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_data = dynamic_cast<const TableData*>(table_data);
-  CHECK_RETURN_IF_FALSE(real_table_data);
+  RET_CHECK(real_table_data);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3146,7 +3146,7 @@ namespace {
     uint32 table_id, int member_id) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3181,11 +3181,11 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 table_id, int member_id, std::vector<int>* member_ids,
     std::vector<std::unique_ptr<TableDataInterface>>* table_datas) {
-  CHECK_RETURN_IF_FALSE(member_ids);
-  CHECK_RETURN_IF_FALSE(table_datas);
+  RET_CHECK(member_ids);
+  RET_CHECK(table_datas);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -3238,7 +3238,7 @@ namespace {
     const std::vector<uint32>& member_ids,
     const std::vector<bool>& member_status, bool insert) {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3315,7 +3315,7 @@ namespace {
     uint32 table_id, int group_id) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3351,13 +3351,13 @@ namespace {
     std::vector<int>* max_group_sizes,
     std::vector<std::vector<uint32>>* member_ids,
     std::vector<std::vector<bool>>* member_status) {
-  CHECK_RETURN_IF_FALSE(group_ids);
-  CHECK_RETURN_IF_FALSE(max_group_sizes);
-  CHECK_RETURN_IF_FALSE(member_ids);
-  CHECK_RETURN_IF_FALSE(member_status);
+  RET_CHECK(group_ids);
+  RET_CHECK(max_group_sizes);
+  RET_CHECK(member_ids);
+  RET_CHECK(member_status);
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
@@ -3429,11 +3429,11 @@ namespace {
 
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_key = dynamic_cast<const TableKey*>(table_key);
-  CHECK_RETURN_IF_FALSE(real_table_key);
+  RET_CHECK(real_table_key);
   auto real_table_data = dynamic_cast<const TableData*>(table_data);
-  CHECK_RETURN_IF_FALSE(real_table_data);
+  RET_CHECK(real_table_data);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3473,11 +3473,11 @@ namespace {
 
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_key = dynamic_cast<const TableKey*>(table_key);
-  CHECK_RETURN_IF_FALSE(real_table_key);
+  RET_CHECK(real_table_key);
   auto real_table_data = dynamic_cast<const TableData*>(table_data);
-  CHECK_RETURN_IF_FALSE(real_table_data);
+  RET_CHECK(real_table_data);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3511,9 +3511,9 @@ namespace {
 
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_key = dynamic_cast<const TableKey*>(table_key);
-  CHECK_RETURN_IF_FALSE(real_table_key);
+  RET_CHECK(real_table_key);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3544,11 +3544,11 @@ namespace {
     TableDataInterface* table_data) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_key = dynamic_cast<const TableKey*>(table_key);
-  CHECK_RETURN_IF_FALSE(real_table_key);
+  RET_CHECK(real_table_key);
   auto real_table_data = dynamic_cast<const TableData*>(table_data);
-  CHECK_RETURN_IF_FALSE(real_table_data);
+  RET_CHECK(real_table_data);
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
 
@@ -3571,7 +3571,7 @@ namespace {
     std::vector<std::unique_ptr<TableDataInterface>>* table_datas) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
 
@@ -3602,9 +3602,9 @@ namespace {
     uint32 table_id, const TableDataInterface* table_data) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_data = dynamic_cast<const TableData*>(table_data);
-  CHECK_RETURN_IF_FALSE(real_table_data);
+  RET_CHECK(real_table_data);
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
 
@@ -3625,7 +3625,7 @@ namespace {
     uint32 table_id) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
 
@@ -3646,9 +3646,9 @@ namespace {
     uint32 table_id, TableDataInterface* table_data) {
   ::absl::ReaderMutexLock l(&data_lock_);
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
   auto real_table_data = dynamic_cast<const TableData*>(table_data);
-  CHECK_RETURN_IF_FALSE(real_table_data);
+  RET_CHECK(real_table_data);
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
 
@@ -3699,7 +3699,7 @@ namespace {
     int dev_id, std::shared_ptr<TdiSdeInterface::SessionInterface> session,
     uint32 table_id, absl::Duration timeout) {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));
@@ -3749,7 +3749,7 @@ namespace {
     uint32 table_id, absl::Duration timeout) {
 
   auto real_session = std::dynamic_pointer_cast<Session>(session);
-  CHECK_RETURN_IF_FALSE(real_session);
+  RET_CHECK(real_session);
 
   const tdi::Table* table;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromIdGet(table_id, &table));

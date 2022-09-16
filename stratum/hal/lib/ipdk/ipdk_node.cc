@@ -415,7 +415,7 @@ std::unique_ptr<IpdkNode> IpdkNode::CreateInstance(
       return tdi_packetio_manager_->TransmitPacket(req.packet());
     }
     default:
-      RETURN_ERROR(ERR_UNIMPLEMENTED) << "Unsupported StreamMessageRequest "
+      return MAKE_ERROR(ERR_UNIMPLEMENTED) << "Unsupported StreamMessageRequest "
                                       << req.ShortDebugString() << ".";
   }
 }
@@ -429,7 +429,7 @@ std::unique_ptr<IpdkNode> IpdkNode::CreateInstance(
       return tdi_action_profile_manager_->WriteActionProfileEntry(session,
                                                                    type, entry);
     default:
-      RETURN_ERROR() << "Unsupported extern entry: " << entry.ShortDebugString()
+      return MAKE_ERROR() << "Unsupported extern entry: " << entry.ShortDebugString()
                      << ".";
   }
 }
@@ -444,7 +444,7 @@ std::unique_ptr<IpdkNode> IpdkNode::CreateInstance(
       return tdi_action_profile_manager_->ReadActionProfileEntry(
           session, entry, writer);
     default:
-      RETURN_ERROR(ERR_OPER_NOT_SUPPORTED)
+      return MAKE_ERROR(ERR_OPER_NOT_SUPPORTED)
           << "Unsupported extern entry: " << entry.ShortDebugString() << ".";
   }
 }
