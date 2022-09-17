@@ -36,9 +36,11 @@ extern "C" {
 
 #if defined(TOFINO_TARGET)
   #include "lld/lld_sku.h"
+  #include "tofino/bf_pal/bf_pal_port_intf.h"
+  #include "tofino/bf_pal/dev_intf.h"
   #include "tofino/bf_pal/pltfm_intf.h"
   #include "tofino/pdfixed/pd_devport_mgr.h"
-  #include "pdfixed/pd_tm.h"
+  #include "tofino/pdfixed/pd_tm.h"
   #include "tdi_tofino/tdi_tofino_defs.h"
 #elif defined(DPDK_TARGET)
   #include "bf_switchd/lib/bf_switchd_lib_init.h"
@@ -47,6 +49,16 @@ extern "C" {
   #include "tdi_rt/tdi_rt_defs.h"
 #else
   #error Target not defined
+#endif
+
+#ifdef DPDK_TARGET
+typedef tdi_rt_table_type_e sde_table_type;
+#define SDE_TABLE_TYPE_COUNTER TDI_RT_TABLE_TYPE_COUNTER
+#define SDE_TABLE_TYPE_METER TDI_RT_TABLE_TYPE_METER
+#elif TOFINO_TARGET
+typedef tdi_tofino_table_type_e sde_table_type;
+#define SDE_TABLE_TYPE_COUNTER TDI_TOFINO_TABLE_TYPE_COUNTER
+#define SDE_TABLE_TYPE_METER TDI_TOFINO_TABLE_TYPE_METER
 #endif
 
 #ifndef P4OVS_CHANGES
@@ -166,7 +178,7 @@ inline constexpr uint64 BytesPerSecondToKbits(uint64 bytes) {
 
       case TDI_MATCH_TYPE_LPM: {
         std::string v(NumBitsToNumBytes(field_size), '\x00');
-        uint16 prefix_length;
+        uint16 prefix_length = 0;
         const char *valueLpm =  reinterpret_cast<const char *>(v.data());
         size_t sizeLpm = reinterpret_cast<size_t>(v.size());
         tdi::KeyFieldValueLPM<const char *> lpmKey(valueLpm, prefix_length, sizeLpm);
@@ -522,12 +534,12 @@ template <typename T>
   tdi::DevMgr::getInstance().deviceGet(0, &device);
   tdi::Flags *flags = new tdi::Flags(0);
   uint32 entries = 0;
-  auto table_type = static_cast<tdi_rt_table_type_e>(
+  auto table_type = static_cast<sde_table_type_e>(
       table->tableInfoGet()->tableTypeGet());
-  if (table_type == TDI_RT_TABLE_TYPE_COUNTER ||
-      table_type == TDI_RT_TABLE_TYPE_METER) {
+  if (table_type == SDE_TABLE_TYPE_COUNTER ||
+      table_type == SDE_RT_TABLE_TYPE_METER) {
     size_t table_size;
-// P4OVS_CHANGES: This conditional is Tofino-specific. What should we do
+// TODO This is Tofino-specific. What should we do
 // for MEV? For DPDK? For third-party backends?
 #if defined(SDE_9_4_0) || defined(SDE_9_5_0)
     RETURN_IF_TDI_ERROR(
@@ -996,8 +1008,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
   return status.ok() ? BF_SUCCESS : BF_INTERNAL_ERROR;
 }
 
-#ifndef P4OVS_CHANGES
-// P4OVS_CHANGES: 'Bf' is a Barefoot-specific name.
+#ifdef TOFINO_TARGET
 ::util::StatusOr<bf_port_speed_t> PortSpeedHalToBf(uint64 speed_bps) {
   switch (speed_bps) {
     case kOneGigBps:
@@ -1016,9 +1027,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
       RETURN_ERROR(ERR_INVALID_PARAM) << "Unsupported port speed.";
   }
 }
-#endif
 
-// P4OVS_CHANGES: 'Bf' is a Barefoot-specific name.
 ::util::StatusOr<int> AutonegHalToBf(TriState autoneg) {
   switch (autoneg) {
     case TRI_STATE_UNKNOWN:
@@ -1032,9 +1041,6 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
   }
 }
 
-#ifndef P4OVS_CHANGES
-
-// P4OVS_CHANGES: 'Bf' is a Barefoot-specific name.
 ::util::StatusOr<bf_fec_type_t> FecModeHalToBf(FecMode fec_mode,
                                                uint64 speed_bps) {
   if (fec_mode == FEC_MODE_UNKNOWN || fec_mode == FEC_MODE_OFF) {
@@ -1060,7 +1066,6 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
   RETURN_ERROR(ERR_INVALID_PARAM) << "Invalid FEC mode.";
 }
 
-// P4OVS_CHANGES: 'Bf' is a Barefoot-specific name.
 ::util::StatusOr<bf_loopback_mode_e> LoopbackModeToBf(
     LoopbackState loopback_mode) {
   switch (loopback_mode) {
@@ -1074,8 +1079,7 @@ bf_status_t sde_port_status_callback(bf_dev_id_t device, bf_dev_port_t dev_port,
           << ".";
   }
 }
-
-#endif // !P4OVS_CHANGES
+#endif // TOFINO_TARGET
 
 }  // namespace
 
@@ -1086,8 +1090,8 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
 
 ::util::StatusOr<PortState> TdiSdeWrapper::GetPortState(int device, int port) {
   int state = 0;
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' is a Barefoot-specific name.
+  // TODO Add for DPDK
+#ifdef TOFINO_TARGET
   RETURN_IF_TDI_ERROR(
       bf_pal_port_oper_state_get(static_cast<bf_dev_id_t>(device),
                                  static_cast<bf_dev_port_t>(port), &state));
@@ -1099,15 +1103,12 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
                                              PortCounters* counters) {
   uint64_t stats[BF_PORT_NUM_COUNTERS] = {0};
 
-  // P4OVS_CHANGES: 'bf_' is a Barefoot-specific name.
+  // TODO: 'bf_' is a Barefoot-specific name.
+  // Use a generic counter get for ports
   RETURN_IF_TDI_ERROR(
       bf_pal_port_all_stats_get(static_cast<bf_dev_id_t>(device),
                                 static_cast<bf_dev_port_t>(port), stats));
-
-  LOG(INFO) << "Port stats retrieved for "
-            << " device=" << device
-            << " port=" << port;
-
+#ifdef DPDK_TARGET
   counters->set_in_octets(stats[RX_BYTES]);
   counters->set_out_octets(stats[TX_BYTES]);
   counters->set_in_unicast_pkts(stats[RX_PACKETS]);
@@ -1122,6 +1123,27 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
   counters->set_in_errors(stats[RX_ERRORS]);
   counters->set_out_errors(stats[TX_ERRORS]);
   counters->set_in_fcs_errors(0);
+#elif TOFINO_TARGET
+  counters->set_in_octets(stats[bf_mac_stat_OctetsReceived]);
+  counters->set_out_octets(stats[bf_mac_stat_OctetsTransmittedTotal]);
+  counters->set_in_unicast_pkts(
+      stats[bf_mac_stat_FramesReceivedwithUnicastAddresses]);
+  counters->set_out_unicast_pkts(stats[bf_mac_stat_FramesTransmittedUnicast]);
+  counters->set_in_broadcast_pkts(
+      stats[bf_mac_stat_FramesReceivedwithBroadcastAddresses]);
+  counters->set_out_broadcast_pkts(
+      stats[bf_mac_stat_FramesTransmittedBroadcast]);
+  counters->set_in_multicast_pkts(
+      stats[bf_mac_stat_FramesReceivedwithMulticastAddresses]);
+  counters->set_out_multicast_pkts(
+      stats[bf_mac_stat_FramesTransmittedMulticast]);
+  counters->set_in_discards(stats[bf_mac_stat_FramesDroppedBufferFull]);
+  counters->set_out_discards(0);       // stat not available
+  counters->set_in_unknown_protos(0);  // stat not meaningful
+  counters->set_in_errors(stats[bf_mac_stat_FrameswithanyError]);
+  counters->set_out_errors(stats[bf_mac_stat_FramesTransmittedwithError]);
+  counters->set_in_fcs_errors(stats[bf_mac_stat_FramesReceivedwithFCSError]);
+#endif
 
   return ::util::OkStatus();
 }
@@ -1145,8 +1167,7 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
     std::unique_ptr<ChannelWriter<PortStatusEvent>> writer) {
   absl::WriterMutexLock l(&port_status_event_writer_lock_);
   port_status_event_writer_ = std::move(writer);
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' is a Barefoot-specific name.
+#ifdef TOFINO_TARGET
   RETURN_IF_TDI_ERROR(
       bf_pal_port_status_notif_reg(sde_port_status_callback, nullptr));
 #endif
@@ -1159,6 +1180,7 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
   return ::util::OkStatus();
 }
 
+#ifdef DPDK_TARGET
 dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
   switch(type) {
     case PORT_TYPE_VHOST: return BF_DPDK_LINK;
@@ -1169,21 +1191,25 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
   }
   return BF_DPDK_PORT_MAX;
 }
+#endif
 
 ::util::Status TdiSdeWrapper::GetPortInfo(int device, int port,
                                          TargetDatapathId *target_dp_id) {
+#ifdef DPDK_TARGET
   struct port_info_t *port_info = NULL;
   RETURN_IF_TDI_ERROR(bf_pal_port_info_get(static_cast<bf_dev_id_t>(device),
                                            static_cast<bf_dev_port_t>(port),
                                            &port_info));
   target_dp_id->set_tdi_portin_id((port_info)->port_attrib.port_in_id);
   target_dp_id->set_tdi_portout_id((port_info)->port_attrib.port_out_id);
+#endif
 
   return ::util::OkStatus();
 }
 
 ::util::Status TdiSdeWrapper::HotplugPort(
     int device, int port, HotplugConfigParams& hotplug_config) {
+#ifdef DPDK_TARGET
   auto hotplug_attrs = absl::make_unique<hotplug_attributes_t>();
   strncpy(hotplug_attrs->qemu_socket_ip,
           hotplug_config.qemu_socket_ip.c_str(),
@@ -1232,21 +1258,26 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
                                               static_cast<bf_dev_port_t>(port),
                                               hotplug_attrs.get()));
   }
+#endif
 
   return ::util::OkStatus();
 }
 
 ::util::Status TdiSdeWrapper::AddPort(int device, int port, uint64 speed_bps,
                                      FecMode fec_mode) {
+#ifdef DPDK_TARGET
   auto port_attrs = absl::make_unique<port_attributes_t>();
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' and 'Bf' are Barefoot-specific names.
-  ASSIGN_OR_RETURN(auto bf_speed, PortSpeedHalToBf(speed_bps));
-  ASSIGN_OR_RETURN(auto bf_fec_mode, FecModeHalToBf(fec_mode, speed_bps));
-#endif
   RETURN_IF_TDI_ERROR(bf_pal_port_add(static_cast<bf_dev_id_t>(device),
                                       static_cast<bf_dev_port_t>(port),
                                       port_attrs.get()));
+#elif TOFINO_TARGET
+  ASSIGN_OR_RETURN(auto bf_speed, PortSpeedHalToBf(speed_bps));
+  ASSIGN_OR_RETURN(auto bf_fec_mode, FecModeHalToBf(fec_mode, speed_bps));
+  RETURN_IF_TDI_ERROR(bf_pal_port_add(static_cast<bf_dev_id_t>(device),
+                                      static_cast<bf_dev_port_t>(port),
+                                      bf_speed,
+                                      bf_fec_mode));
+#endif
   return ::util::OkStatus();
 }
 
@@ -1256,12 +1287,15 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
   static int port_in;
   static int port_out;
 
-  auto port_attrs = absl::make_unique<port_attributes_t>();
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' and 'Bf' are Barefoot-specific names.
+#ifdef TOFINO_TARGET
   ASSIGN_OR_RETURN(auto bf_speed, PortSpeedHalToBf(speed_bps));
   ASSIGN_OR_RETURN(auto bf_fec_mode, FecModeHalToBf(fec_mode, speed_bps));
-#endif
+  RETURN_IF_TDI_ERROR(bf_pal_port_add(static_cast<bf_dev_id_t>(device),
+                                      static_cast<bf_dev_port_t>(port),
+                                      bf_speed,
+                                      bf_fec_mode));
+#elif DPDK_TARGET
+  auto port_attrs = absl::make_unique<port_attributes_t>();
   strncpy(port_attrs->port_name, config.port_name.c_str(),
           sizeof(port_attrs->port_name));
   strncpy(port_attrs->pipe_in, config.pipeline_name.c_str(),
@@ -1318,6 +1352,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
       port_out--;
       RETURN_IF_TDI_ERROR(bf_status);
   }
+#endif
 
   return ::util::OkStatus();
 }
@@ -1329,8 +1364,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 }
 
 ::util::Status TdiSdeWrapper::EnablePort(int device, int port) {
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' is Barefoot-specific.
+#ifdef TOFINO_TARGET
   RETURN_IF_TDI_ERROR(bf_pal_port_enable(static_cast<bf_dev_id_t>(device),
                                          static_cast<bf_dev_port_t>(port)));
 #endif
@@ -1338,8 +1372,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 }
 
 ::util::Status TdiSdeWrapper::DisablePort(int device, int port) {
-#ifndef P4OVS_CHANGES
-// P4OVS_CHANGES: 'bf_' is Barefoot-specific.
+#ifdef TOFINO_TARGET
  RETURN_IF_TDI_ERROR(bf_pal_port_disable(static_cast<bf_dev_id_t>(device),
                                          static_cast<bf_dev_port_t>(port)));
 #endif
@@ -1349,7 +1382,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 ::util::Status TdiSdeWrapper::SetPortShapingRate(
     int device, int port, bool is_in_pps, uint32 burst_size,
     uint64 rate_per_second) {
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   if (!is_in_pps) {
     rate_per_second /= 1000;  // The SDE expects the bitrate in kbps.
   }
@@ -1362,7 +1395,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 
 ::util::Status TdiSdeWrapper::EnablePortShaping(
     int device, int port, TriState enable) {
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   if (enable == TriState::TRI_STATE_TRUE) {
     RETURN_IF_TDI_ERROR(p4_pd_tm_enable_port_shaping(device, port));
   } else if (enable == TriState::TRI_STATE_FALSE) {
@@ -1375,8 +1408,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 
 ::util::Status TdiSdeWrapper::SetPortAutonegPolicy(
     int device, int port, TriState autoneg) {
-#ifndef P4OVS_CHANGES
-// P4OVS_CHANGES: 'bf_' and 'Bf' are Barefoot-specific.
+#ifdef TOFINO_TARGET
   ASSIGN_OR_RETURN(auto autoneg_v, AutonegHalToBf(autoneg));
   RETURN_IF_TDI_ERROR(bf_pal_port_autoneg_policy_set(
       static_cast<bf_dev_id_t>(device), static_cast<bf_dev_port_t>(port),
@@ -1386,8 +1418,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 }
 
 ::util::Status TdiSdeWrapper::SetPortMtu(int device, int port, int32 mtu) {
-#ifndef P4OVS_CHANGES
-// P4OVS_CHANGES: 'bf_' and 'Bf' are Barefoot-specific.
+#ifdef TOFINO_TARGET
   if (mtu < 0) {
     RETURN_ERROR(ERR_INVALID_PARAM) << "Invalid MTU value.";
   }
@@ -1400,8 +1431,7 @@ dpdk_port_type_t get_target_port_type(SWBackendPortType type) {
 }
 
 bool TdiSdeWrapper::IsValidPort(int device, int port) {
-#ifndef P4OVS_CHANGES
-// P4OVS_CHANGES: 'bf_' and 'BF_' are Barefoot-specific.
+#ifdef TOFINO_TARGET
   return bf_pal_port_is_valid(device, port) == BF_SUCCESS;
 #else
   // P4OVS_CHANGES: Function returns bool. What is BF_SUCCESS doing here?
@@ -1415,8 +1445,7 @@ bool TdiSdeWrapper::IsValidPort(int device, int port) {
     // Do nothing if we try to set loopback mode to the default one (UNKNOWN).
     return ::util::OkStatus();
   }
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' and 'Bf' are Barefoot-specific.
+#ifdef TOFINO_TARGET
   ASSIGN_OR_RETURN(bf_loopback_mode_e lp_mode, LoopbackModeToBf(loopback_mode));
   RETURN_IF_TDI_ERROR(
       bf_pal_port_loopback_mode_set(static_cast<bf_dev_id_t>(device),
@@ -1453,26 +1482,12 @@ std::string GetBfChipFamilyAndType(int device) {
       return "TOFINO_32Q";
     case BF_DEV_BFNT10032D:
       return "TOFINO_32D";
-    case BF_DEV_BFNT10024D:
-      return "TOFINO_24D";
-    case BF_DEV_BFNT10018Q:
-      return "TOFINO_18Q";
-    case BF_DEV_BFNT10018D:
-      return "TOFINO_18D";
-    case BF_DEV_BFNT10017D:
-      return "TOFINO_17D";
     case BF_DEV_BFNT20128Q:
       return "TOFINO2_128Q";
 #ifdef BF_DEV_BFNT20128QM
     case BF_DEV_BFNT20128QM:  // added in 9.3.0
       return "TOFINO2_128QM";
 #endif
-#ifdef BF_DEV_BFNT20128QH
-    case BF_DEV_BFNT20128QH:  // added in 9.3.0
-      return "TOFINO2_128QH";
-#endif
-    case BF_DEV_BFNT20096T:
-      return "TOFINO2_96T";
     case BF_DEV_BFNT20080T:
       return "TOFINO2_80T";
 #ifdef BF_DEV_BFNT20080TM
@@ -1491,8 +1506,6 @@ std::string GetBfChipFamilyAndType(int device) {
     case BF_DEV_BFNT20032S:  // removed in 9.3.0
       return "TOFINO2_32S";
 #endif
-    case BF_DEV_BFNT20048D:
-      return "TOFINO2_48D";
 #ifdef BF_DEV_BFNT20036D
     case BF_DEV_BFNT20036D:  // removed in 9.3.0
       return "TOFINO2_36D";
@@ -1534,7 +1547,6 @@ std::string GetBfChipId(int device) {
 
 #endif // TOFINO_TARGET
 
-// P4OVS_CHANGES: 'Bf' is Barefoot-specific.
 std::string TdiSdeWrapper::GetBfChipType(int device) const {
 #if defined(TOFINO_TARGET)
   return absl::StrCat(GetBfChipFamilyAndType(device), ", revision ",
@@ -1601,7 +1613,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 
 ::util::StatusOr<int> TdiSdeWrapper::GetPcieCpuPort(int device) {
   int port = 0;
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   int port = p4_devport_mgr_pcie_cpu_port_get(device);
   CHECK_RETURN_IF_FALSE(port != -1);
 #endif
@@ -1610,7 +1622,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 
 ::util::Status TdiSdeWrapper::SetTmCpuPort(int device, int port) {
 
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   CHECK_RETURN_IF_FALSE(p4_pd_tm_set_cpuport(device, port) == 0)
       << "Unable to set CPU port " << port << " on device " << device;
 #endif
@@ -1619,7 +1631,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 
 ::util::Status TdiSdeWrapper::SetDeflectOnDropDestination(
     int device, int port, int queue) {
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   // The DoD destination must be a pipe-local port.
   p4_pd_tm_pipe_t pipe = DEV_PORT_TO_PIPE(port);
   RETURN_IF_TDI_ERROR(
@@ -1690,7 +1702,7 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
   tdi_id_mapper_.reset();
 
   RETURN_IF_TDI_ERROR(bf_pal_device_warm_init_begin(
-      dev_id, BF_DEV_WARM_INIT_FAST_RECFG,
+      dev_id, BF_DEV_WARM_INIT_FAST_RECFG, BF_DEV_SERDES_UPD_NONE,
       /* upgrade_agents */ true));
   bf_device_profile_t device_profile = {};
 
@@ -1801,8 +1813,7 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
 //  Packetio
 
 ::util::Status TdiSdeWrapper::TxPacket(int device, const std::string& buffer) {
-#ifndef P4OVS_CHANGES
-  // P4OVS_CHANGES: 'bf_' and 'BF_' are Barefoot-specific.
+#ifdef TOFINO_TARGET
   bf_pkt* pkt = nullptr;
   RETURN_IF_TDI_ERROR(
       bf_pkt_alloc(device, &pkt, buffer.size(), BF_DMA_CPU_PKT_TRANSMIT_0));
@@ -1817,9 +1828,7 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
 }
 
 ::util::Status TdiSdeWrapper::StartPacketIo(int device) {
-#ifndef P4OVS_CHANGES
   // P4OVS_CHANGES: 'bf_' and 'BF_' are Barefoot-specific.
-  // Maybe move to InitSde function?
   if (!bf_pkt_is_inited(device)) {
     RETURN_IF_TDI_ERROR(bf_pkt_init());
   }

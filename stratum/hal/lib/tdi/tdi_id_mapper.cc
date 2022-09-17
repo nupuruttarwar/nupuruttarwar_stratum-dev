@@ -21,6 +21,16 @@
   #error P4 target not defined!
 #endif
 
+#ifdef DPDK_TARGET
+typedef tdi_rt_table_type_e sde_table_type;
+#define SDE_TABLE_TYPE_ACTION_PROFILE TDI_RT_TABLE_TYPE_ACTION_PROFILE
+#define SDE_TABLE_TYPE_SELECTOR TDI_RT_TABLE_TYPE_SELECTOR
+#elif TOFINO_TARGET
+typedef tdi_tofino_table_type_e sde_table_type;
+#define SDE_TABLE_TYPE_ACTION_PROFILE TDI_TOFINO_TABLE_TYPE_ACTION_PROFILE
+#define SDE TABLE_TYPE_SELECTOR TDI_TOFINO_TABLE_TYPE_SELECTOR
+#endif
+
 namespace stratum {
 namespace hal {
 namespace barefoot {
@@ -203,20 +213,16 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
   for (const auto* table : tdi_tables) {
     std::string table_name;
     tdi_id_t table_id;
-    // TODO: tdi_rt_table_type_e is DPDK-specific
-    // TDI table types should be target-neutral.
-    auto table_type = static_cast<tdi_rt_table_type_e>(
-	table->tableInfoGet()->tableTypeGet());
+    auto table_type =
+        static_cast<sde_table_type>(table->tableInfoGet()->tableTypeGet());
     table_id = table->tableInfoGet()->idGet();
     table_name = table->tableInfoGet()->nameGet();
 
-    // TODO: TDI_RT_TABLE_TYPE_ACTION_PROFILE is DPDK-specific
-    // TDI table types should be target-neutral.
-    if (table_type == TDI_RT_TABLE_TYPE_ACTION_PROFILE) {
+    if (table_type == SDE_TABLE_TYPE_ACTION_PROFILE) {
       CHECK_RETURN_IF_FALSE(
           gtl::InsertIfNotPresent(&act_prof_tdi_ids, table_name, table_id))
           << "Action profile with name " << table_name << " already exists.";
-    } else if (table_type == TDI_RT_TABLE_TYPE_SELECTOR) {
+    } else if (table_type == SDE_TABLE_TYPE_SELECTOR) {
       CHECK_RETURN_IF_FALSE(
           gtl::InsertIfNotPresent(&selector_tdi_ids, table_name, table_id))
           << "Action selector with name " << table_name << " already exists.";
