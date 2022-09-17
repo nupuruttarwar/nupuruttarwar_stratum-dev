@@ -8,9 +8,6 @@
 #include <set>
 #include <utility>
 
-// P4OVS_CHANGES: Are all the disabled sections Tofino-specific?
-// If so, #ifndef P4OVS_CHANGES -> #ifdef TOFINO_TARGET.
-
 #include "absl/strings/match.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
@@ -534,13 +531,11 @@ template <typename T>
   tdi::DevMgr::getInstance().deviceGet(0, &device);
   tdi::Flags *flags = new tdi::Flags(0);
   uint32 entries = 0;
-  auto table_type = static_cast<sde_table_type_e>(
+  auto table_type = static_cast<sde_table_type>(
       table->tableInfoGet()->tableTypeGet());
   if (table_type == SDE_TABLE_TYPE_COUNTER ||
-      table_type == SDE_RT_TABLE_TYPE_METER) {
+      table_type == SDE_TABLE_TYPE_METER) {
     size_t table_size;
-// TODO This is Tofino-specific. What should we do
-// for MEV? For DPDK? For third-party backends?
 #if defined(SDE_9_4_0) || defined(SDE_9_5_0)
     RETURN_IF_TDI_ERROR(
         table->sizeGet(*tdi_session, tdi_dev_target, *flags, &table_size));
@@ -1434,7 +1429,7 @@ bool TdiSdeWrapper::IsValidPort(int device, int port) {
 #ifdef TOFINO_TARGET
   return bf_pal_port_is_valid(device, port) == BF_SUCCESS;
 #else
-  // P4OVS_CHANGES: Function returns bool. What is BF_SUCCESS doing here?
+  // NOTE: Function returns bool. What is BF_SUCCESS doing here?
   return BF_SUCCESS;
 #endif
 }
@@ -1559,7 +1554,7 @@ std::string TdiSdeWrapper::GetBfChipType(int device) const {
 #endif
 }
 
-// P4OVS_CHANGES: This is Tofino-specific.
+// NOTE: This is Tofino-specific.
 std::string TdiSdeWrapper::GetSdeVersion() const {
 #if defined(SDE_9_1_0)
   return "9.1.0";
@@ -1701,9 +1696,15 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 
   tdi_id_mapper_.reset();
 
+#ifdef DPDK_TARGET
+  RETURN_IF_TDI_ERROR(bf_pal_device_warm_init_begin(
+      dev_id, BF_DEV_WARM_INIT_FAST_RECFG,
+      /* upgrade_agents */ true));
+#elif TOFINO_TARGET
   RETURN_IF_TDI_ERROR(bf_pal_device_warm_init_begin(
       dev_id, BF_DEV_WARM_INIT_FAST_RECFG, BF_DEV_SERDES_UPD_NONE,
       /* upgrade_agents */ true));
+#endif
   bf_device_profile_t device_profile = {};
 
   // Commit new files to disk and build device profile for SDE to load.
@@ -1828,7 +1829,7 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
 }
 
 ::util::Status TdiSdeWrapper::StartPacketIo(int device) {
-  // P4OVS_CHANGES: 'bf_' and 'BF_' are Barefoot-specific.
+#ifdef TOFINO_TARGET
   if (!bf_pkt_is_inited(device)) {
     RETURN_IF_TDI_ERROR(bf_pkt_init());
   }
@@ -1853,7 +1854,7 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
 }
 
 ::util::Status TdiSdeWrapper::StopPacketIo(int device) {
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   for (int tx_ring = BF_PKT_TX_RING_0; tx_ring < BF_PKT_TX_RING_MAX;
        ++tx_ring) {
     RETURN_IF_TDI_ERROR(bf_pkt_tx_done_notif_deregister(
