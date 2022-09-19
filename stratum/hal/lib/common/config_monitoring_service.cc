@@ -270,12 +270,6 @@ bool ContainsUniqueNames(const T& values) {
     }
 
 #ifndef P4OVS_CHANGES
-    // P4OVS_CHANGES:
-    // - Why is this code suppressed?
-    // - In what context(s) does this change apply?
-    // - Is this change temporary or permanent?
-    // - If temporary, what are the prerequisites for reverting it?
-
     // Save running_chassis_config_ after everything went OK.
     running_chassis_config_.reset(config.PassOwnership());
 

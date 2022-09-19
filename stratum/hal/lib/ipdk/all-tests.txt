@@ -1,3 +1,0 @@
-//stratum/hal/lib/ipdk:ipdk_chassis_manager_test
-//stratum/hal/lib/ipdk:ipdk_hal_test
-//stratum/hal/lib/ipdk:ipdk_switch_test
