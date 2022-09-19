@@ -14,7 +14,7 @@
 
 // NOTE: This module should be target-neutral.
 #if defined(TOFINO_TARGET)
-  #include "tofino/tdi_tofino_defs.h"
+  #include "tdi_tofino/tdi_tofino_defs.h"
 #elif defined(DPDK_TARGET)
   #include "tdi_rt/tdi_rt_defs.h"
 #else
@@ -28,7 +28,7 @@ typedef tdi_rt_table_type_e sde_table_type;
 #elif TOFINO_TARGET
 typedef tdi_tofino_table_type_e sde_table_type;
 #define SDE_TABLE_TYPE_ACTION_PROFILE TDI_TOFINO_TABLE_TYPE_ACTION_PROFILE
-#define SDE TABLE_TYPE_SELECTOR TDI_TOFINO_TABLE_TYPE_SELECTOR
+#define SDE_TABLE_TYPE_SELECTOR TDI_TOFINO_TABLE_TYPE_SELECTOR
 #endif
 
 namespace stratum {

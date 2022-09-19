@@ -12,10 +12,9 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-stratum_bf_common_deps = [
+stratum_tdi_common_deps = [
     "//stratum/glue:init_google",
     "//stratum/glue:logging",
-    "//stratum/hal/lib/common:hal",
     "//stratum/hal/lib/phal:phal_sim",
     "//stratum/hal/lib/phal",
     "//stratum/lib/security:auth_policy_checker",
@@ -47,19 +46,20 @@ stratum_cc_binary(
     ],
     arches = HOST_ARCHES,
     data = [
-        "//stratum/hal/lib/barefoot:tofino_skip_p4.conf",
-        "//stratum/hal/lib/barefoot:tofino_skip_p4_no_bsp.conf",
+        "//stratum/hal/bin/barefoot:tofino_skip_p4.conf",
+        "//stratum/hal/bin/barefoot:tofino_skip_p4_no_bsp.conf",
     ],
     deps = [
         "//stratum/hal/lib/tdi:tdi_chassis_manager",
         "//stratum/hal/lib/tdi:tdi_sde_wrapper",
         "//stratum/hal/lib/tdi:tdi_switch",
         "//stratum/hal/lib/tdi:tdi_node",
+        "//stratum/hal/lib/tdi:tdi_hal",
         "//stratum/hal/lib/tdi:tdi_action_profile_manager",
         "//stratum/hal/lib/tdi:tdi_pre_manager",
         "//stratum/hal/lib/tdi:tdi_table_manager",
         "//stratum/hal/lib/tdi:tdi_counter_manager",
-    ] + stratum_bf_common_deps,
+    ] + stratum_tdi_common_deps,
 )
 
 # Rules for Debian package

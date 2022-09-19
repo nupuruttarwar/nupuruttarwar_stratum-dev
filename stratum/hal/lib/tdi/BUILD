@@ -165,7 +165,7 @@ stratum_cc_library(
         "//stratum/lib/channel",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@local_barefoot_bin//:bfsde",
+        "@local_tofino_bin//:tofino_sde",
     ],
 )
 
@@ -341,7 +341,7 @@ stratum_cc_library(
         "@com_github_p4lang_p4runtime//:p4info_cc_proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
-        "@local_barefoot_bin//:bfsde",
+        "@local_tofino_bin//:tofino_sde",
     ],
 )
 
@@ -350,7 +350,7 @@ stratum_cc_library(
     hdrs = ["macros.h"],
     deps = [
         "//stratum/lib:macros",
-        "@local_barefoot_bin//:bfsde",
+        "@local_tofino_bin//:tofino_sde",
     ],
 )
 

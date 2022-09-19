@@ -32,6 +32,7 @@
 extern "C" {
 
 #if defined(TOFINO_TARGET)
+  #include "bf_switchd/bf_switchd.h"
   #include "lld/lld_sku.h"
   #include "tofino/bf_pal/bf_pal_port_intf.h"
   #include "tofino/bf_pal/dev_intf.h"
@@ -536,12 +537,8 @@ template <typename T>
   if (table_type == SDE_TABLE_TYPE_COUNTER ||
       table_type == SDE_TABLE_TYPE_METER) {
     size_t table_size;
-#if defined(SDE_9_4_0) || defined(SDE_9_5_0)
     RETURN_IF_TDI_ERROR(
         table->sizeGet(*tdi_session, tdi_dev_target, *flags, &table_size));
-#else
-    RETURN_IF_TDI_ERROR(table->tableSizeGet(&table_size));
-#endif  // SDE_9_4_0
     entries = table_size;
   } else {
     RETURN_IF_TDI_ERROR(table->usageGet(
@@ -1096,14 +1093,11 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
 
 ::util::Status TdiSdeWrapper::GetPortCounters(int device, int port,
                                              PortCounters* counters) {
+#ifdef DPDK_TARGET
   uint64_t stats[BF_PORT_NUM_COUNTERS] = {0};
-
-  // TODO: 'bf_' is a Barefoot-specific name.
-  // Use a generic counter get for ports
   RETURN_IF_TDI_ERROR(
       bf_pal_port_all_stats_get(static_cast<bf_dev_id_t>(device),
                                 static_cast<bf_dev_port_t>(port), stats));
-#ifdef DPDK_TARGET
   counters->set_in_octets(stats[RX_BYTES]);
   counters->set_out_octets(stats[TX_BYTES]);
   counters->set_in_unicast_pkts(stats[RX_PACKETS]);
@@ -1119,6 +1113,10 @@ TdiSdeWrapper::TdiSdeWrapper() : port_status_event_writer_(nullptr) {}
   counters->set_out_errors(stats[TX_ERRORS]);
   counters->set_in_fcs_errors(0);
 #elif TOFINO_TARGET
+  uint64_t stats[BF_NUM_RMON_COUNTERS] = {0};
+  RETURN_IF_TDI_ERROR(
+      bf_pal_port_all_stats_get(static_cast<bf_dev_id_t>(device),
+                                static_cast<bf_dev_port_t>(port), stats));
   counters->set_in_octets(stats[bf_mac_stat_OctetsReceived]);
   counters->set_out_octets(stats[bf_mac_stat_OctetsTransmittedTotal]);
   counters->set_in_unicast_pkts(
@@ -1556,22 +1554,11 @@ std::string TdiSdeWrapper::GetBfChipType(int device) const {
 
 // NOTE: This is Tofino-specific.
 std::string TdiSdeWrapper::GetSdeVersion() const {
-#if defined(SDE_9_1_0)
-  return "9.1.0";
-#elif defined(SDE_9_2_0)
-  return "9.2.0";
-#elif defined(SDE_9_3_0)
-  return "9.3.0";
-#elif defined(SDE_9_3_1)
-  return "9.3.1";
-#elif defined(SDE_9_3_2)
-  return "9.3.2";
-#elif defined(SDE_9_4_0)
-  return "9.4.0";
-#elif defined(SDE_9_5_0)
-  return "9.5.0";
-#else
-#error Unsupported SDE version
+#ifdef TOFINO_TARGET
+  return "9.11.0";
+#elif
+  // TODO tdi version
+  return "1.0.0";
 #endif
 }
 
@@ -1607,7 +1594,6 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 }
 
 ::util::StatusOr<int> TdiSdeWrapper::GetPcieCpuPort(int device) {
-  int port = 0;
 #ifdef TOFINO_TARGET
   int port = p4_devport_mgr_pcie_cpu_port_get(device);
   CHECK_RETURN_IF_FALSE(port != -1);
@@ -1884,10 +1870,10 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
   return ::util::OkStatus();
 }
 
-#ifndef P4OVS_CHANGES
 
 ::util::Status TdiSdeWrapper::HandlePacketRx(
     bf_dev_id_t device, bf_pkt* pkt, bf_pkt_rx_ring_t rx_ring) {
+#ifdef TOFINO_TARGET
   absl::ReaderMutexLock l(&packet_rx_callback_lock_);
   auto rx_writer = gtl::FindOrNull(device_to_packet_rx_writer_, device);
   CHECK_RETURN_IF_FALSE(rx_writer)
@@ -1901,6 +1887,7 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
   VLOG(1) << "Received " << buffer.size() << " byte packet from CPU "
           << StringToHex(buffer);
 
+#endif
   return ::util::OkStatus();
 }
 
@@ -1911,8 +1898,12 @@ bf_status_t TdiSdeWrapper::BfPktTxNotifyCallback(
           << " tx ring: " << tx_ring << " tx cookie: " << tx_cookie
           << " status: " << status;
 
+#ifdef TOFINO_TARGET
   bf_pkt* pkt = reinterpret_cast<bf_pkt*>(tx_cookie);
   return bf_pkt_free(device, pkt);
+#else
+  return BF_SUCCESS;
+#endif
 }
 
 bf_status_t TdiSdeWrapper::BfPktRxNotifyCallback(
@@ -1920,10 +1911,13 @@ bf_status_t TdiSdeWrapper::BfPktRxNotifyCallback(
   TdiSdeWrapper* tdi_sde_wrapper = TdiSdeWrapper::GetSingleton();
   // TODO(max): Handle error
   tdi_sde_wrapper->HandlePacketRx(device, pkt, rx_ring);
+#ifdef TOFINO_TARGET
   return bf_pkt_free(device, pkt);
+#else
+  return BF_SUCCESS;
+#endif
 }
 
-#endif // P4OVS_CHANGES
 
 // PRE
 namespace {
@@ -2039,13 +2033,8 @@ namespace {
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromNameGet(kPreNodeTable, &table));
   size_t table_size;
 
-// P4OVS_CHANGES: Conditions are Tofino-specific.
-#if defined(SDE_9_4_0) || defined(SDE_9_5_0)
   RETURN_IF_TDI_ERROR(table->sizeGet(*real_session->tdi_session_,
                                       *dev_tgt, *flags, &table_size));
-#else
-  RETURN_IF_TDI_ERROR(table->tableSizeGet(&table_size));
-#endif  // SDE_9_4_0
   uint32 usage;
   RETURN_IF_TDI_ERROR(table->usageGet(
       *real_session->tdi_session_, *dev_tgt,
@@ -2800,13 +2789,8 @@ namespace {
   } else {
     // Wildcard write to all indices.
     size_t table_size;
-// P4OVS_CHANGES: Conditions are Tofino-specific.
-#if defined(SDE_9_4_0) || defined(SDE_9_5_0)
     RETURN_IF_TDI_ERROR(table->sizeGet(*real_session->tdi_session_,
                                        *dev_tgt, *flags, &table_size));
-#else
-    RETURN_IF_TDI_ERROR(table->sizeGet(&table_size));
-#endif  // SDE_9_4_0
     for (size_t i = 0; i < table_size; ++i) {
       // Register key: $REGISTER_INDEX
       RETURN_IF_ERROR(SetFieldExact(table_key.get(), kRegisterIndex, i));
@@ -2950,13 +2934,8 @@ namespace {
   } else {
     // Wildcard write to all indices.
     size_t table_size;
-// P4OVS_CHANGES: Conditions are Tofino-specific.
-#if defined(SDE_9_4_0) || defined(SDE_9_5_0)
     RETURN_IF_TDI_ERROR(table->sizeGet(*real_session->tdi_session_,
                                        *dev_tgt, *flags, &table_size));
-#else
-    RETURN_IF_TDI_ERROR(table->sizeGet(&table_size));
-#endif  // SDE_9_4_0
     for (size_t i = 0; i < table_size; ++i) {
       // Meter key: $METER_INDEX
       RETURN_IF_ERROR(SetFieldExact(table_key.get(), kMeterIndex, i));
