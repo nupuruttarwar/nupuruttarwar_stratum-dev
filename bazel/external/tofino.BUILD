@@ -1,6 +1,6 @@
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
 # Copyright 2022 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
 
 load("@//bazel/rules:package_rule.bzl", "pkg_tar_with_symlinks")
 load("@rules_cc//cc:defs.bzl", "cc_library")

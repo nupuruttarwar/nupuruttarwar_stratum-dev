@@ -59,7 +59,7 @@ typedef tdi_tofino_table_type_e sde_table_type;
 #define SDE_TABLE_TYPE_METER TDI_TOFINO_TABLE_TYPE_METER
 #endif
 
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
 // Flag to enable detailed logging in the SDE pipe manager.
 extern bool stat_mgr_enable_detail_trace;
 #endif
@@ -1556,7 +1556,7 @@ std::string TdiSdeWrapper::GetBfChipType(int device) const {
 std::string TdiSdeWrapper::GetSdeVersion() const {
 #ifdef TOFINO_TARGET
   return "9.11.0";
-#elif
+#else
   // TODO tdi version
   return "1.0.0";
 #endif
@@ -1597,17 +1597,20 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 #ifdef TOFINO_TARGET
   int port = p4_devport_mgr_pcie_cpu_port_get(device);
   CHECK_RETURN_IF_FALSE(port != -1);
-#endif
   return port;
+#else
+  return MAKE_ERROR() << "GetPcieCpuPort not implemented";
+#endif
 }
 
 ::util::Status TdiSdeWrapper::SetTmCpuPort(int device, int port) {
-
 #ifdef TOFINO_TARGET
   CHECK_RETURN_IF_FALSE(p4_pd_tm_set_cpuport(device, port) == 0)
       << "Unable to set CPU port " << port << " on device " << device;
-#endif
   return ::util::OkStatus();
+#else
+  return MAKE_ERROR() << "SetTmCpuPort not implemented";
+#endif
 }
 
 ::util::Status TdiSdeWrapper::SetDeflectOnDropDestination(
@@ -1617,9 +1620,10 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
   p4_pd_tm_pipe_t pipe = DEV_PORT_TO_PIPE(port);
   RETURN_IF_TDI_ERROR(
       p4_pd_tm_set_negative_mirror_dest(device, pipe, port, queue));
-#endif
-
   return ::util::OkStatus();
+#else
+  return MAKE_ERROR() << "SetDeflectOnDropDestination not implemented";
+#endif
 }
 
 // BFRT
@@ -1655,12 +1659,12 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
     // Override previous parsing if bf_kpkt KLM was loaded.
     LOG(INFO)
         << "kernel mode packet driver present, forcing kernel_pkt option!";
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
     switchd_main_ctx->kernel_pkt = true;
 #endif
   }
 
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   switchd_main_ctx->skip_hld.mc_mgr = true;
   switchd_main_ctx->skip_hld.pkt_mgr = true;
   switchd_main_ctx->skip_hld.traffic_mgr = true;
@@ -1756,13 +1760,13 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
       bf_sys_log_level_set(BF_MOD_PKT, BF_LOG_DEST_STDOUT, BF_LOG_WARN) == 0);
   CHECK_RETURN_IF_FALSE(
       bf_sys_log_level_set(BF_MOD_PIPE, BF_LOG_DEST_STDOUT, BF_LOG_WARN) == 0);
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
   stat_mgr_enable_detail_trace = false;
 #endif
   if (VLOG_IS_ON(2)) {
     CHECK_RETURN_IF_FALSE(bf_sys_log_level_set(BF_MOD_PIPE, BF_LOG_DEST_STDOUT,
                                                BF_LOG_WARN) == 0);
-#ifndef P4OVS_CHANGES
+#ifdef TOFINO_TARGET
     stat_mgr_enable_detail_trace = true;
 #endif
   }
@@ -1871,9 +1875,9 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
 }
 
 
+#ifdef TOFINO_TARGET
 ::util::Status TdiSdeWrapper::HandlePacketRx(
     bf_dev_id_t device, bf_pkt* pkt, bf_pkt_rx_ring_t rx_ring) {
-#ifdef TOFINO_TARGET
   absl::ReaderMutexLock l(&packet_rx_callback_lock_);
   auto rx_writer = gtl::FindOrNull(device_to_packet_rx_writer_, device);
   CHECK_RETURN_IF_FALSE(rx_writer)
@@ -1886,8 +1890,6 @@ TdiSdeWrapper::CreateTableData(int table_id, int action_id) {
   }
   VLOG(1) << "Received " << buffer.size() << " byte packet from CPU "
           << StringToHex(buffer);
-
-#endif
   return ::util::OkStatus();
 }
 
@@ -1898,12 +1900,8 @@ bf_status_t TdiSdeWrapper::BfPktTxNotifyCallback(
           << " tx ring: " << tx_ring << " tx cookie: " << tx_cookie
           << " status: " << status;
 
-#ifdef TOFINO_TARGET
   bf_pkt* pkt = reinterpret_cast<bf_pkt*>(tx_cookie);
   return bf_pkt_free(device, pkt);
-#else
-  return BF_SUCCESS;
-#endif
 }
 
 bf_status_t TdiSdeWrapper::BfPktRxNotifyCallback(
@@ -1911,13 +1909,9 @@ bf_status_t TdiSdeWrapper::BfPktRxNotifyCallback(
   TdiSdeWrapper* tdi_sde_wrapper = TdiSdeWrapper::GetSingleton();
   // TODO(max): Handle error
   tdi_sde_wrapper->HandlePacketRx(device, pkt, rx_ring);
-#ifdef TOFINO_TARGET
   return bf_pkt_free(device, pkt);
-#else
-  return BF_SUCCESS;
-#endif
 }
-
+#endif // TOFINO_TARGET
 
 // PRE
 namespace {
