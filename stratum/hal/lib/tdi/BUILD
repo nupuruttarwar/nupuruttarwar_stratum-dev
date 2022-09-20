@@ -1,5 +1,3 @@
-# Bazel build file for hal/lib/tdi
-
 # Copyright 2018 Google LLC
 # Copyright 2018-present Open Networking Foundation
 # Copyright 2022 Intel Corporation
@@ -20,6 +18,34 @@ licenses(["notice"])  # Apache v2
 package(
     default_visibility = STRATUM_INTERNAL,
 )
+
+config_setting(
+    name = "dpdk_target",
+    define_values = {
+        "target": "dpdk",
+    },
+)
+
+dpdk_defines = [
+    "DPDK_TARGET",
+]
+
+config_setting(
+    name = "tofino_target",
+    define_values = {
+        "target": "tofino",
+    },
+)
+
+tofino_defines = [
+    "TOFINO_TARGET",
+]
+
+target_defines = select({
+#    ":dpdk_target": dpdk_defines,
+    ":tofino_target": tofino_defines,
+    # error if target not specified
+})
 
 stratum_cc_library(
     name = "tdi_switch",
@@ -139,6 +165,7 @@ stratum_cc_library(
     name = "tdi_sde_wrapper",
     srcs = ["tdi_sde_wrapper.cc"],
     hdrs = ["tdi_sde_wrapper.h"],
+    defines = target_defines,
     deps = [
         ":tdi_sde_interface",
         ":tdi_constants",

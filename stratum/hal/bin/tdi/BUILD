@@ -12,6 +12,34 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "dpdk_target",
+    define_values = {
+        "target": "dpdk",
+    },
+)
+
+config_setting(
+    name = "tofino_target",
+    define_values = {
+        "target": "tofino",
+    },
+)
+
+dpdk_defines = [
+    "DPDK_TARGET",
+]
+
+tofino_defines = [
+    "TOFINO_TARGET",
+]
+
+target_defines = select({
+#    ":dpdk_target": dpdk_defines,
+    ":tofino_target": tofino_defines,
+    # error if target not specified
+})
+
 stratum_tdi_common_deps = [
     "//stratum/glue:init_google",
     "//stratum/glue:logging",
@@ -45,6 +73,7 @@ stratum_cc_binary(
         "tdi_main.cc",
     ],
     arches = HOST_ARCHES,
+    defines = target_defines,
     data = [
         "//stratum/hal/bin/barefoot:tofino_skip_p4.conf",
         "//stratum/hal/bin/barefoot:tofino_skip_p4_no_bsp.conf",
