@@ -23,7 +23,7 @@ DEFINE_string(tdi_sde_install, "/usr",
 DEFINE_bool(tdi_switchd_background, false,
             "Run switch daemon in the background with no interactive features");
 // TODO: Target-specific default.
-DEFINE_string(tdi_switchd_cfg, "stratum/hal/bin/tdi/tofino_skip_p4.conf",
+DEFINE_string(tdi_switchd_cfg, "/usr/share/stratum/tofino_skip_p4.conf",
               "Path to the switch daemon json config file");
 
 namespace stratum {

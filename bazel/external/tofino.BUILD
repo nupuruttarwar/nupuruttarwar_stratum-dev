@@ -52,12 +52,15 @@ pkg_tar_with_symlinks(
     name = "tofino_library_files",
     srcs = glob([
         "tofino-bin/lib/bfshell_plugin_*.so*",
+        "tofino-bin/lib/libclish.so*",
         "tofino-bin/lib/libavago.so*",
-        "tofino-bin/lib/libbfsys.so*",
+        "tofino-bin/lib/libtarget_sys.so*",
+        "tofino-bin/lib/libtarget_utils.so*",
         "tofino-bin/lib/libbfutils.so*",
         "tofino-bin/lib/libdriver.so*",
         "tofino-bin/lib/libdru_sim.so*",
-        "tofino-bin/lib/libpython3.4m.so*",
+        "tofino-bin/lib/libpython3.*",
+        "tofino-bin/lib/libtdi*",
     ]),
     mode = "0644",
     package_dir = "/usr",
@@ -67,6 +70,7 @@ pkg_tar_with_symlinks(
 pkg_tar_with_symlinks(
     name = "tofino_shareable_files",
     srcs = glob([
+        "tofino-bin/share/bf_switchd/**",
         "tofino-bin/share/bf_rt_shared/**",
         "tofino-bin/share/bfsys/**",
         "tofino-bin/share/cli/xml/**",

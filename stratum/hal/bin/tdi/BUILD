@@ -33,7 +33,7 @@ stratum_cc_binary(
         "//stratum/glue:logging",
         "//stratum/glue/status",
         "//stratum/glue/status:status_macros",
-        "//stratum/hal/lib/tdi:bf_cc_proto",
+        "//stratum/hal/lib/tdi:tdi_cc_proto",
         "//stratum/lib:utils",
         "@com_github_nlohmann_json//:json",
     ],
@@ -65,7 +65,6 @@ stratum_cc_binary(
 # Rules for Debian package
 pkg_tar(
     name = "stratum_tdi_binaries",
-    # TODO(bocon): Consider refactoring common start script and builder
     srcs = [
         "deb/attach-bf-shell.sh",
         "deb/start-stratum.sh",
@@ -74,13 +73,12 @@ pkg_tar(
     ],
     mode = "0755",
     package_dir = "/usr/bin",
-#   symlinks = {"./usr/bin/stratum_bf": "/usr/bin/stratum_tdi"},
 )
 
 pkg_tar(
     name = "systemd_service",
     srcs = [
-        "deb/stratum_bf.service",
+        "deb/stratum_tdi.service",
     ],
     mode = "0644",
     package_dir = "/usr/lib/systemd/system",
@@ -89,8 +87,8 @@ pkg_tar(
 pkg_tar(
     name = "stratum_shareable_files",
     srcs = [
-        "//stratum/hal/lib/barefoot:tofino_skip_p4.conf",
-        "//stratum/hal/lib/barefoot:tofino_skip_p4_no_bsp.conf",
+        "//stratum/hal/bin/barefoot:tofino_skip_p4.conf",
+        "//stratum/hal/bin/barefoot:tofino_skip_p4_no_bsp.conf",
     ],
     mode = "0644",
     package_dir = "/usr/share/stratum",
@@ -100,7 +98,7 @@ pkg_tar(
     name = "stratum_configs",
     srcs = [
         "deb/stratum.flags",
-        "deb/stratum_bf.env",
+        "deb/stratum_tdi.env",
         "//stratum/hal/lib/common:gnmi_caps.pb.txt",
     ],
     mode = "0644",
@@ -116,14 +114,14 @@ pkg_tar(
         ":stratum_configs",
         ":stratum_shareable_files",
         ":systemd_service",
-        "@local_barefoot_bin//:bf_library_files",
-        "@local_barefoot_bin//:bf_shareable_files",
-        "@local_barefoot_bin//:kernel_module",
+        "@local_tofino_bin//:tofino_library_files",
+        "@local_tofino_bin//:tofino_shareable_files",
+        "@local_tofino_bin//:tofino_kernel_module",
     ],
 )
 
 pkg_tar(
-    name = "stratum_tdi_data",
+    name = "stratum_tofino_data",
     extension = "tar.bz2",
     deps = [
         ":stratum_tdi_binaries",
@@ -132,10 +130,9 @@ pkg_tar(
 )
 
 pkg_deb(
-    name = "stratum_tdi_deb",
+    name = "stratum_tofino_deb",
     architecture = "amd64",
-#   conflicts = ["stratum-bfrt"],
-    data = ":stratum_tdi_data",
+    data = ":stratum_tofino_data",
     depends = [
         "kmod",
         "libedit2",
