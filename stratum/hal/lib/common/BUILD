@@ -1,8 +1,7 @@
 # Copyright 2018 Google LLC
 # Copyright 2018-present Open Networking Foundation
+# Copyright 2022 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-
-licenses(["notice"])  # Apache v2
 
 load(
     "//bazel:rules.bzl",
@@ -14,6 +13,8 @@ load(
 load("//bazel:deps.bzl", "P4RUNTIME_VER")
 
 load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+
+licenses(["notice"])  # Apache v2
 
 package(
     #default_hdrs_check = "strict",
@@ -804,4 +805,141 @@ stratum_cc_test(
 cc_library(
     name = "testdata",
     data = glob(["testdata/**"]),
+)
+
+cc_library(
+    name = "gnmi_publisher",
+    srcs = [
+        "gnmi_publisher.cc",
+    ],
+    hdrs = [
+        "gnmi_events.h",
+        "gnmi_publisher.h",
+        "yang_parse_tree.h",
+        "yang_parse_tree_paths.h",
+    ],
+    deps = [
+        "//stratum/glue/gtl:map_util",
+        "//stratum/glue/status:status",
+        "//stratum/glue:integral_types",
+        "//stratum/hal/lib/common:utils",
+        "//stratum/lib:timer_daemon",
+        "//stratum/lib:utils",
+        ":channel_writer_wrapper",
+        ":common_cc_proto",
+        ":switch_interface",
+        ":writer_interface",
+        "@com_github_openconfig_gnmi_proto//:gnmi_cc_grpc",
+        "@com_github_openconfig_gnmi_proto//:gnmi_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+stratum_cc_test(
+    name = "gnmi_publisher_test",
+    srcs = [
+        "gnmi_publisher_test.cc",
+    ],
+    deps = [
+        ":gnmi_publisher",
+        ":subscribe_reader_writer_mock",
+        ":switch_mock",
+        ":test_main",
+        ":yang_parse_tree",
+        ":yang_parse_tree_paths",
+        "//stratum/glue/status",
+        "//stratum/glue/status:status_macros",
+        "//stratum/glue/status:status_test_util",
+        "//stratum/glue:logging",
+        "@com_github_openconfig_hercules//:openconfig_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+stratum_cc_library(
+    name = "yang_parse_tree",
+    srcs = [
+        "yang_parse_tree.cc",
+    ],
+    hdrs = [
+        "gnmi_events.h",
+        "gnmi_publisher.h",
+        "yang_parse_tree.h",
+        "yang_parse_tree_paths.h",
+    ],
+    deps = [
+        ":common_cc_proto",
+        ":switch_interface",
+        ":writer_interface",
+        "//stratum/glue/status:status",
+        "//stratum/glue/status:status_macros",
+        "//stratum/hal/lib/common:utils",
+        "//stratum/lib:macros",
+        "//stratum/lib:utils",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_github_openconfig_gnmi_proto//:gnmi_cc_grpc",
+    ],
+)
+
+cc_library(
+    name = "yang_parse_tree_mock",
+    testonly = 1,
+    hdrs = ["yang_parse_tree_mock.h"],
+    deps = [
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+stratum_cc_library(
+    name = "yang_parse_tree_paths",
+    srcs = [
+        "yang_parse_tree_paths.cc",
+    ],
+    hdrs = [
+        "gnmi_events.h",
+        "gnmi_publisher.h",
+        "yang_parse_tree.h",
+        "yang_parse_tree_paths.h",
+    ],
+    deps = [
+        ":openconfig_converter",
+        ":switch_interface",
+        "//stratum/glue/gtl:map_util",
+        "//stratum/hal/lib/common:utils",
+        "//stratum/lib:timer_daemon",
+        "//stratum/lib:utils",
+        "@com_github_openconfig_gnmi_proto//:gnmi_cc_grpc",
+        "@com_github_openconfig_hercules//:openconfig_cc_proto",
+    ],
+)
+
+stratum_cc_test(
+    name = "yang_parse_tree_test",
+    srcs = [
+        "yang_parse_tree_test.cc",
+    ],
+    deps = [
+        ":gnmi_publisher",
+        ":subscribe_reader_writer_mock",
+        ":switch_mock",
+        ":test_main",
+        ":testdata",
+        ":writer_mock",
+        ":yang_parse_tree",
+        ":yang_parse_tree_mock",
+        ":yang_parse_tree_paths",
+        "//stratum/glue/status:status_test_util",
+        "//stratum/hal/lib/common:utils",
+        "//stratum/lib/test_utils:matchers",
+        "//stratum/lib:constants",
+        "//stratum/lib:utils",
+        "@com_github_openconfig_gnmi_proto//:gnmi_cc_grpc",
+        "@com_github_openconfig_hercules//:openconfig_cc_proto",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_googletest//:gtest",
+    ],
 )

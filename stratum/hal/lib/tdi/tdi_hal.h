@@ -1,11 +1,12 @@
 // Copyright 2018 Google LLC
 // Copyright 2018-present Open Networking Foundation
+// Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 // The Hardware Abstraction Layer (HAL) of the stratum stack.
 
-#ifndef STRATUM_HAL_LIB_COMMON_HAL_H_
-#define STRATUM_HAL_LIB_COMMON_HAL_H_
+#ifndef STRATUM_HAL_LIB_TDI_TDI_HAL_H_
+#define STRATUM_HAL_LIB_TDI_TDI_HAL_H_
 
 #include <pthread.h>
 #include <signal.h>
@@ -18,40 +19,36 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/synchronization/mutex.h"
 #include "grpcpp/grpcpp.h"
-#include "stratum/hal/lib/common/admin_service.h"
-#include "stratum/hal/lib/common/certificate_management_service.h"
-// #include "stratum/hal/lib/common/cmal_service.h"
 #include "stratum/hal/lib/common/common.pb.h"
 #include "stratum/hal/lib/common/config_monitoring_service.h"
-#include "stratum/hal/lib/common/diag_service.h"
-#include "stratum/hal/lib/common/error_buffer.h"
-#include "stratum/hal/lib/common/file_service.h"
 #include "stratum/hal/lib/common/p4_service.h"
 #include "stratum/hal/lib/common/switch_interface.h"
 #include "stratum/lib/security/auth_policy_checker.h"
-#include "stratum/lib/security/credentials_manager.h"
 
 namespace stratum {
 namespace hal {
 
-// Class 'Hal' is nothing but a wrapper around all the HAL services, which
+// Class 'TdiHal' is nothing but a wrapper around all the HAL services, which
 // implement the main functionality of HAL and handle all the gRPC calls, and
 // the '::gRPC::Server' class object which dispatches the calls etc. The intent
 // is to 1) put the common code for dealing with these two classes into one
 // place, and 2) control the server side parameters without affecting the rest
 // of the code. This class is initialized once and is accessed through its
 // singleton instance.
-class Hal final {
+class TdiHal final {
  public:
-  virtual ~Hal();
+  virtual ~TdiHal();
 
   // All the pre-setup sanity checks that need to be done before anything else.
   // Typically an error returned from this method is an indicator that we should
-  // not continue running Hal.
+  // not continue running TdiHal.
   ::util::Status SanityCheck();
 
   // Sets up HAL in coldboot and warmboot mode.
   ::util::Status Setup();
+
+  // Sets up HAL in specified mode.
+  ::util::Status Setup(bool warmboot);
 
   // Tears down HAL. Called as part of both warmboot and coldboot shutdown.
   // In case of warmboot shutdown, the user needs to freeze the stack before
@@ -79,29 +76,27 @@ class Hal final {
 
   // Creates the singleton instance. Expected to be called once to initialize
   // the instance.
-  static Hal* CreateSingleton(OperationMode mode,
-                              SwitchInterface* switch_interface,
-                              AuthPolicyChecker* auth_policy_checker,
-                              CredentialsManager* credentials_manager)
+  static TdiHal* CreateSingleton(OperationMode mode,
+                                  SwitchInterface* switch_interface,
+                                  AuthPolicyChecker* auth_policy_checker)
       LOCKS_EXCLUDED(init_lock_);
 
   // Return the singleton instance to be used in the signal handler..
-  static Hal* GetSingleton() LOCKS_EXCLUDED(init_lock_);
+  static TdiHal* GetSingleton() LOCKS_EXCLUDED(init_lock_);
 
-  // Hal is neither copyable nor movable.
-  Hal(const Hal&) = delete;
-  Hal& operator=(const Hal&) = delete;
+  // TdiHal is neither copyable nor movable.
+  TdiHal(const TdiHal&) = delete;
+  TdiHal& operator=(const TdiHal&) = delete;
 
-  // Pipe file descriptors used to deliver signals from the handler to Hal.
+  // Pipe file descriptors used to deliver signals from the handler to TdiHal.
   static int pipe_read_fd_;
   static int pipe_write_fd_;
 
  private:
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  Hal(OperationMode mode, SwitchInterface* switch_interface,
-      AuthPolicyChecker* auth_policy_checker,
-      CredentialsManager* credentials_manager);
+  TdiHal(OperationMode mode, SwitchInterface* switch_interface,
+          AuthPolicyChecker* auth_policy_checker);
 
   // Initializes the HAL server and all the services it provides. Called in
   // CreateSingleton() as soon as the class instance is created.
@@ -110,10 +105,6 @@ class Hal final {
   // Helpers to register/unregister SIGINT or SIGTERM signal handlers.
   ::util::Status RegisterSignalHandlers();
   ::util::Status UnregisterSignalHandlers();
-
-  // Sends an RPC to procmon gRPC service to checkin. To be called before
-  // ::grpc::Server::Wait().
-  ::util::Status ProcmonCheckin();
 
   // Thread function waiting for a signal in the pipe and then initialting the
   // HAL shutdown.
@@ -136,9 +127,6 @@ class Hal final {
   // Pointer to AuthPolicyChecker. Not owned by this class.
   AuthPolicyChecker* auth_policy_checker_;
 
-  // Pointer to CredentialsManager. Not owned by this class.
-  CredentialsManager* credentials_manager_;
-
   // The ErrorBuffer instance to keep track of all the critical errors we face.
   // A pointer to this instance is also passed to all the HAL services.
   std::unique_ptr<ErrorBuffer> error_buffer_;
@@ -146,10 +134,6 @@ class Hal final {
   // Unique pointer to the HAL service classes. Owned by the class.
   std::unique_ptr<ConfigMonitoringService> config_monitoring_service_;
   std::unique_ptr<P4Service> p4_service_;
-  std::unique_ptr<AdminService> admin_service_;
-  std::unique_ptr<CertificateManagementService> certificate_management_service_;
-  std::unique_ptr<DiagService> diag_service_;
-  std::unique_ptr<FileService> file_service_;
 
   // Unique pointer to the gRPC server serving the external RPC connections
   // serviced by ConfigMonitoringService and P4Service. Owned by the class.
@@ -167,10 +151,10 @@ class Hal final {
   static absl::Mutex init_lock_;
 
   // The singleton instance.
-  static Hal* singleton_ GUARDED_BY(init_lock_);
+  static TdiHal* singleton_ GUARDED_BY(init_lock_);
 };
 
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_COMMON_HAL_H_
+#endif  // STRATUM_HAL_LIB_TDI_TDI_HAL_H_
