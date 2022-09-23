@@ -342,6 +342,7 @@ stratum_cc_library(
     name = "tdi_id_mapper",
     srcs = ["tdi_id_mapper.cc"],
     hdrs = ["tdi_id_mapper.h"],
+    defines = target_defines,
     deps = [
         ":tdi_cc_proto",
         ":tdi_sde_interface",

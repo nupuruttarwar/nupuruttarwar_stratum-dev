@@ -21,14 +21,14 @@
   #error P4 target not defined!
 #endif
 
-#ifdef DPDK_TARGET
-typedef tdi_rt_table_type_e sde_table_type;
-#define SDE_TABLE_TYPE_ACTION_PROFILE TDI_RT_TABLE_TYPE_ACTION_PROFILE
-#define SDE_TABLE_TYPE_SELECTOR TDI_RT_TABLE_TYPE_SELECTOR
-#elif TOFINO_TARGET
-typedef tdi_tofino_table_type_e sde_table_type;
-#define SDE_TABLE_TYPE_ACTION_PROFILE TDI_TOFINO_TABLE_TYPE_ACTION_PROFILE
-#define SDE_TABLE_TYPE_SELECTOR TDI_TOFINO_TABLE_TYPE_SELECTOR
+#if defined(DPDK_TARGET)
+  typedef tdi_rt_table_type_e sde_table_type;
+  #define SDE_TABLE_TYPE_ACTION_PROFILE TDI_RT_TABLE_TYPE_ACTION_PROFILE
+  #define SDE_TABLE_TYPE_SELECTOR TDI_RT_TABLE_TYPE_SELECTOR
+#elif defined(TOFINO_TARGET)
+  typedef tdi_tofino_table_type_e sde_table_type;
+  #define SDE_TABLE_TYPE_ACTION_PROFILE TDI_TOFINO_TABLE_TYPE_ACTION_PROFILE
+  #define SDE_TABLE_TYPE_SELECTOR TDI_TOFINO_TABLE_TYPE_SELECTOR
 #endif
 
 namespace stratum {
