@@ -46,17 +46,17 @@ extern "C" {
   #include "bf_pal/dev_intf.h"
   #include "tdi_rt/tdi_rt_defs.h"
 #else
-  #error Target not defined
+  #error P4 Target not defined!
 #endif
 
-#ifdef DPDK_TARGET
-typedef tdi_rt_table_type_e sde_table_type;
-#define SDE_TABLE_TYPE_COUNTER TDI_RT_TABLE_TYPE_COUNTER
-#define SDE_TABLE_TYPE_METER TDI_RT_TABLE_TYPE_METER
-#elif TOFINO_TARGET
-typedef tdi_tofino_table_type_e sde_table_type;
-#define SDE_TABLE_TYPE_COUNTER TDI_TOFINO_TABLE_TYPE_COUNTER
-#define SDE_TABLE_TYPE_METER TDI_TOFINO_TABLE_TYPE_METER
+#if defined(DPDK_TARGET)
+  typedef enum tdi_rt_table_type_e sde_table_type;
+  #define SDE_TABLE_TYPE_COUNTER TDI_RT_TABLE_TYPE_COUNTER
+  #define SDE_TABLE_TYPE_METER TDI_RT_TABLE_TYPE_METER
+#elif defined(TOFINO_TARGET)
+  typedef enum tdi_tofino_table_type_e sde_table_type;
+  #define SDE_TABLE_TYPE_COUNTER TDI_TOFINO_TABLE_TYPE_COUNTER
+  #define SDE_TABLE_TYPE_METER TDI_TOFINO_TABLE_TYPE_METER
 #endif
 
 #ifdef TOFINO_TARGET
@@ -2068,9 +2068,8 @@ namespace {
   CHECK_RETURN_IF_FALSE(real_session);
 
   const tdi::Table* table;  // PRE node table.
-  tdi_id_t table_id;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromNameGet(kPreNodeTable, &table));
-  table_id = table->tableInfoGet()->idGet();
+  auto table_id = table->tableInfoGet()->idGet();
 
   std::unique_ptr<tdi::TableKey> table_key;
   std::unique_ptr<tdi::TableData> table_data;
@@ -2148,9 +2147,8 @@ namespace {
 
   tdi::Flags *flags = new tdi::Flags(0);
   const tdi::Table* table;
-  tdi_id_t table_id;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromNameGet(kPreNodeTable, &table));
-  table_id = table->tableInfoGet()->idGet();
+  auto table_id = table->tableInfoGet()->idGet();
 
   // TODO(max): handle partial delete failures
   for (const auto& mc_node_id : mc_node_ids) {
@@ -2182,9 +2180,8 @@ namespace {
 
   tdi::Flags *flags = new tdi::Flags(0);
   const tdi::Table* table;  // PRE node table.
-  tdi_id_t table_id;
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromNameGet(kPreNodeTable, &table));
-  table_id = table->tableInfoGet()->idGet();
+  auto table_id = table->tableInfoGet()->idGet();
 
   std::unique_ptr<tdi::TableKey> table_key;
   std::unique_ptr<tdi::TableData> table_data;
@@ -2217,9 +2214,6 @@ namespace {
   auto real_session = std::dynamic_pointer_cast<Session>(session);
   CHECK_RETURN_IF_FALSE(real_session);
 
-  const tdi::Table* table;  // PRE MGID table.
-  tdi_id_t table_id;
-
   const tdi::Device *device = nullptr;
   tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
   std::unique_ptr<tdi::Target> dev_tgt;
@@ -2227,8 +2221,9 @@ namespace {
 
 
   tdi::Flags *flags = new tdi::Flags(0);
+  const tdi::Table* table = nullptr;  // PRE MGID table.
   RETURN_IF_TDI_ERROR(tdi_info_->tableFromNameGet(kPreMgidTable, &table));
-  table_id = table->tableInfoGet()->idGet();
+  auto table_id = table->tableInfoGet()->idGet();
   std::unique_ptr<tdi::TableKey> table_key;
   std::unique_ptr<tdi::TableData> table_data;
   RETURN_IF_TDI_ERROR(table->keyAllocate(&table_key));
@@ -2721,8 +2716,6 @@ namespace {
     dataFieldInfo = table->tableInfoGet()->dataFieldGet(field_id);
     RETURN_IF_NULL(dataFieldInfo);
     field_name = dataFieldInfo->nameGet();
-    tdi_field_data_type_e data_type;
-    data_type = dataFieldInfo->dataTypeGet();
     if (absl::EndsWith(field_name, ".f1")) {
       return field_id;
     }
