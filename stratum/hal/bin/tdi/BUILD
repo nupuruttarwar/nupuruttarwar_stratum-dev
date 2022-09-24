@@ -71,6 +71,8 @@ stratum_cc_binary(
     name = "stratum_tdi",
     srcs = [
         "tdi_main.cc",
+        "tdi_main.h",
+        "main.cc",
     ],
     arches = HOST_ARCHES,
     defines = target_defines,
