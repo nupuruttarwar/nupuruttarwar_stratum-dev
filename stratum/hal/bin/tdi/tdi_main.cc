@@ -3,6 +3,8 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
+#include "stratum/hal/bin/tdi/tdi_main.h"
+
 #include "gflags/gflags.h"
 #include "stratum/glue/init_google.h"
 #include "stratum/glue/logging.h"
@@ -110,7 +112,3 @@ namespace barefoot {
 }  // namespace barefoot
 }  // namespace hal
 }  // namespace stratum
-
-int main(int argc, char* argv[]) {
-  return stratum::hal::barefoot::TdiMain(argc, argv).error_code();
-}

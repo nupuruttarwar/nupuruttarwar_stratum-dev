@@ -254,6 +254,7 @@ void BuildGnmiPath(std::string path_str, ::gnmi::Path* path) {
 
   std::shared_ptr<::grpc::ChannelCredentials> channel_credentials =
       ::grpc::InsecureChannelCredentials();
+#if 0
   if (!FLAGS_ca_cert.empty()) {
     ::grpc::string pem_root_certs;
     ::grpc::experimental::TlsKeyMaterialsConfig::PemKeyCertPair
@@ -280,6 +281,7 @@ void BuildGnmiPath(std::string path_str, ::gnmi::Path* path) {
       channel_credentials = ::grpc::experimental::TlsCredentials(cred_opts);
     }
   }
+#endif
   auto channel = ::grpc::CreateChannel(FLAGS_grpc_addr, channel_credentials);
   auto stub = ::gnmi::gNMI::NewStub(channel);
   std::string cmd = std::string(argv[1]);
