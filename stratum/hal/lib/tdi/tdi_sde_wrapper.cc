@@ -1664,12 +1664,6 @@ std::string TdiSdeWrapper::GetSdeVersion() const {
 #endif
   }
 
-#ifdef TOFINO_TARGET
-  switchd_main_ctx->skip_hld.mc_mgr = true;
-  switchd_main_ctx->skip_hld.pkt_mgr = true;
-  switchd_main_ctx->skip_hld.traffic_mgr = true;
-#endif
-
   RETURN_IF_TDI_ERROR(bf_switchd_lib_init(switchd_main_ctx.get()))
       << "Error when starting switchd.";
   LOG(INFO) << "switchd started successfully";
