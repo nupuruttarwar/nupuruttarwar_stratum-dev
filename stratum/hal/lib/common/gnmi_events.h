@@ -516,7 +516,7 @@ class CopyOnWriteChassisConfig {
   explicit CopyOnWriteChassisConfig(ChassisConfig* ptr)
       : copied_(false), delete_active_(false), original_(ptr), active_(ptr) {
     if (ptr == nullptr) {
-      // ative_ cannot be nullptr. If it is, allocate a new object.
+      // active_ cannot be nullptr. If it is, allocate a new object.
       active_ = new ChassisConfig();
       delete_active_ = true;
     }

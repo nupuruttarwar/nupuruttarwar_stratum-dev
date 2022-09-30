@@ -14,7 +14,6 @@
 #include "stratum/glue/integral_types.h"
 #include "stratum/glue/logging.h"
 #include "stratum/glue/status/status_macros.h"
-//#include "bfIntf/bf_chassis_manager.h"
 #include "stratum/hal/lib/tdi/tdi_chassis_manager.h"
 #include "stratum/hal/lib/tdi/tdi_node.h"
 #include "stratum/hal/lib/tdi/utils.h"
@@ -195,14 +194,15 @@ TdiSwitch::~TdiSwitch() {}
 }
 
 ::util::Status TdiSwitch::RetrieveValue(uint64 node_id,
-                                         const DataRequest& request,
-                                         WriterInterface<DataResponse>* writer,
-                                         std::vector<::util::Status>* details) {
+                                        const DataRequest& request,
+                                        WriterInterface<DataResponse>* writer,
+                                        std::vector<::util::Status>* details) {
   absl::ReaderMutexLock l(&chassis_lock);
   for (const auto& req : request.requests()) {
     DataResponse resp;
     ::util::Status status = ::util::OkStatus();
     switch (req.request_case()) {
+      // Port data request
       case DataRequest::Request::kOperStatus:
       case DataRequest::Request::kAdminStatus:
       case DataRequest::Request::kMacAddress:
@@ -224,6 +224,7 @@ TdiSwitch::~TdiSwitch() {}
         }
         break;
       }
+      // Node information request
       case DataRequest::Request::kNodeInfo: {
         auto device_id =
             tdi_chassis_manager_->GetUnitFromNodeId(req.node_info().node_id());
@@ -255,9 +256,9 @@ TdiSwitch::~TdiSwitch() {}
 }
 
 ::util::Status TdiSwitch::SetValue(uint64 node_id, const SetRequest& request,
-                                    std::vector<::util::Status>* details) {
-  LOG(INFO) << "TdiSwitch::SetValue is not implemented yet, but changes will "
-            << "be performed when ChassisConfig is pushed again. "
+                                   std::vector<::util::Status>* details) {
+  LOG(INFO) << "TdiSwitch::SetValue is not implemented yet. Changes will "
+            << "be applied when ChassisConfig is pushed again. "
             << request.ShortDebugString() << ".";
 
   return ::util::OkStatus();
