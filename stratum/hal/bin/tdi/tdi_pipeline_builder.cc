@@ -33,8 +33,8 @@ constexpr char kUsage[] =
     R"USAGE(usage: -p4c_conf_file=/path/to/bf-p4c/output/program.conf -bf_pipeline_config_binary_file=$PWD/bf-pipeline.pb.bin
 
 This program assembles a Stratum-tdi pipeline protobuf message from the output
-of the Barefoot P4 compiler. The resulting message can be pushed to Stratum in
-the p4_device_config field of the P4Runtime SetForwardingPipelineConfig message.
+of the P4 compiler. The resulting message can be pushed to Stratum in the
+p4_device_config field of the P4Runtime SetForwardingPipelineConfig message.
 )USAGE";
 
 ::util::Status Unpack() {
