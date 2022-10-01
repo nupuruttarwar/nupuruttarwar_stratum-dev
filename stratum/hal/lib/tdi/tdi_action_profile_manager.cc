@@ -12,7 +12,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 TdiActionProfileManager::TdiActionProfileManager(
     TdiSdeInterface* tdi_sde_interface, int device)
@@ -338,6 +338,6 @@ TdiActionProfileManager::CreateInstance(TdiSdeInterface* tdi_sde_interface,
   return ::util::OkStatus();
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

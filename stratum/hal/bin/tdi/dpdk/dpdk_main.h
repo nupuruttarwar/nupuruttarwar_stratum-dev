@@ -8,11 +8,11 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 ::util::Status DpdkMain(int argc, char* argv[]);
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
 

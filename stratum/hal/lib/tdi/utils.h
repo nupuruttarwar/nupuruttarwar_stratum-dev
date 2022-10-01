@@ -19,7 +19,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 // A set of helper functions to determine whether a P4 match object constructed
 // from a bfrt table key is a "don't care" match.
@@ -49,7 +49,7 @@ std::string RangeDefaultHigh(size_t bitwidth);
 // byte string.
 int NumBitsToNumBytes(int num_bits);
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
 

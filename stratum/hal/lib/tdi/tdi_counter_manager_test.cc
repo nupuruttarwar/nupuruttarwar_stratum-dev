@@ -18,7 +18,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 using ::testing::_;
 using ::testing::DoAll;
@@ -69,6 +69,6 @@ TEST_F(TdiCounterManagerTest, ModifyIndirectCounterTest) {
       session_mock, ::p4::v1::Update::MODIFY, entry));
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

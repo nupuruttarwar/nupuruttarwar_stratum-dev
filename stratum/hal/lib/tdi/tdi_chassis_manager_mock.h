@@ -14,7 +14,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 class TdiChassisManagerMock : public TdiChassisManager {
  public:
@@ -43,7 +43,7 @@ class TdiChassisManagerMock : public TdiChassisManager {
   MOCK_CONST_METHOD1(GetUnitFromNodeId, ::util::StatusOr<int>(uint64 node_id));
 };
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
 

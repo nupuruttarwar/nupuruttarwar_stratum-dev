@@ -15,7 +15,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 class TdiSdeInterface;
 class TdiNode;
@@ -151,7 +151,7 @@ class DpdkSwitch : virtual public SwitchInterface,
   std::map<uint64, TdiNode*> node_id_to_tdi_node_;  //  pointers not owned
 };
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
 

@@ -15,7 +15,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 class TdiNodeMock : public TdiNode {
  public:
@@ -46,7 +46,7 @@ class TdiNodeMock : public TdiNode {
                ::util::Status(const ::p4::v1::StreamMessageRequest& req));
 };
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
 

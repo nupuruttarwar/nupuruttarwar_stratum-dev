@@ -24,7 +24,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 class TdiTableManager {
  public:
@@ -170,7 +170,7 @@ class TdiTableManager {
   friend class TdiTableManagerTest;
 };
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
 

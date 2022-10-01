@@ -17,7 +17,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 static constexpr char bf_config_1pipe_str[] = R"PROTO(
   p4_name: "prog1"
@@ -101,6 +101,6 @@ TEST(BfPipelineConvertTest, BfPipelineConfigToLegacyBfPiConfigMultiPipeFail) {
   EXPECT_FALSE(BfPipelineConfigToPiConfig(bf_config, &extracted_config).ok());
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

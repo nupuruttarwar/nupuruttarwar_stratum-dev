@@ -18,7 +18,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 using ::testing::HasSubstr;
 
@@ -232,6 +232,6 @@ TEST(ConvertPriorityTest, InvalidTdiPriority) {
               stratum::ErrorCode::ERR_INVALID_PARAM);
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

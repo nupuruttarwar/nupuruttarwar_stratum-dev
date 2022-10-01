@@ -23,7 +23,7 @@ DECLARE_bool(incompatible_enable_tdi_legacy_bytestring_responses);
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 TdiPacketioManager::TdiPacketioManager(TdiSdeInterface* tdi_sde_interface,
                                        int device)
@@ -377,6 +377,6 @@ void* TdiPacketioManager::SdeRxThreadFunc(void* arg) {
   return nullptr;
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

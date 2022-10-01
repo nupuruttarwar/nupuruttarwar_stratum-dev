@@ -22,7 +22,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 DpdkSwitch::DpdkSwitch(DpdkChassisManager* chassis_manager,
                        TdiSdeInterface* sde_interface,
@@ -276,6 +276,6 @@ std::unique_ptr<DpdkSwitch> DpdkSwitch::CreateInstance(
   return tdi_node;
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

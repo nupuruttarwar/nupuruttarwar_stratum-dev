@@ -38,7 +38,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 using PortStatusEvent = TdiSdeInterface::PortStatusEvent;
 
@@ -1031,6 +1031,6 @@ void DpdkChassisManager::CleanupInternalState() {
   return status;
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

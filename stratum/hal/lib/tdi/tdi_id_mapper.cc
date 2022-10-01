@@ -33,7 +33,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 TdiIdMapper::TdiIdMapper()
     : tdi_to_p4info_id_(),
@@ -298,6 +298,6 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
   return gtl::FindOrDie(act_selector_to_profile_mapping_, action_selector_id);
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

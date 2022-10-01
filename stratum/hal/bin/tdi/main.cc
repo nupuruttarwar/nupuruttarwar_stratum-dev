@@ -4,6 +4,6 @@
 #include "stratum/hal/bin/tdi/tdi_main.h"
 
 int main(int argc, char* argv[]) {
-  return stratum::hal::barefoot::TdiMain(argc, argv).error_code();
+  return stratum::hal::tdix::TdiMain(argc, argv).error_code();
 }
 

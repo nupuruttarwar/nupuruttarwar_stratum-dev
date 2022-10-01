@@ -25,7 +25,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 using ::testing::_;
 using ::testing::DoAll;
@@ -652,6 +652,6 @@ TEST_F(DpdkSwitchTest, SetNoContentsPass) {
 // TODO(unknown): Complete unit test coverage.
 
 }  // namespace
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

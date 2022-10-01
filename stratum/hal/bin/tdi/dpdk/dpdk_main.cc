@@ -29,7 +29,7 @@ DEFINE_string(dpdk_infrap4d_cfg, "stratum/hal/bin/dpdk/tofino_skip_p4.conf",
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 ::util::Status DpdkMain(int argc, char* argv[]) {
   InitGoogle(argv[0], &argc, &argv, true);
@@ -107,6 +107,6 @@ namespace barefoot {
   return ::util::OkStatus();
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum

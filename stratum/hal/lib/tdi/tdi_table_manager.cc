@@ -22,14 +22,14 @@
 
 DEFINE_uint32(
     tdi_table_sync_timeout_ms,
-    stratum::hal::barefoot::kDefaultSyncTimeout / absl::Milliseconds(1),
+    stratum::hal::tdix::kDefaultSyncTimeout / absl::Milliseconds(1),
     "The timeout for table sync operation like counters and registers.");
 DEFINE_bool(incompatible_enable_register_reset_annotations, false,
             "Enables handling of annotions to reset registers.");
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdix {
 
 TdiTableManager::TdiTableManager(OperationMode mode,
                                  TdiSdeInterface* tdi_sde_interface, int device)
@@ -935,6 +935,6 @@ TdiTableManager::ReadDirectCounterEntry(
   return ::util::OkStatus();
 }
 
-}  // namespace barefoot
+}  // namespace tdix
 }  // namespace hal
 }  // namespace stratum
