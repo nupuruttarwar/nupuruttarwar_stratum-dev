@@ -31,7 +31,7 @@ namespace tdix {
 
 class TableKey : public TdiSdeInterface::TableKeyInterface {
  public:
-  explicit TableKey(std::unique_ptr<tdi::TableKey> table_key)
+  explicit TableKey(std::unique_ptr<::tdi::TableKey> table_key)
       : table_key_(std::move(table_key)) {}
 
   // TableKeyInterface public methods.
@@ -54,10 +54,10 @@ class TableKey : public TdiSdeInterface::TableKeyInterface {
 
   // Allocates a new table key object.
   static ::util::StatusOr<std::unique_ptr<TdiSdeInterface::TableKeyInterface>>
-  CreateTableKey(const tdi::TdiInfo* tdi_info_, int table_id);
+  CreateTableKey(const ::tdi::TdiInfo* tdi_info_, int table_id);
 
   // Stores the underlying SDE object.
-  std::unique_ptr<tdi::TableKey> table_key_;
+  std::unique_ptr<::tdi::TableKey> table_key_;
 
  private:
   TableKey() {}
@@ -65,7 +65,7 @@ class TableKey : public TdiSdeInterface::TableKeyInterface {
 
 class TableData : public TdiSdeInterface::TableDataInterface {
  public:
-  explicit TableData(std::unique_ptr<tdi::TableData> table_data)
+  explicit TableData(std::unique_ptr<::tdi::TableData> table_data)
       : table_data_(std::move(table_data)) {}
 
   // TableDataInterface public methods.
@@ -82,11 +82,11 @@ class TableData : public TdiSdeInterface::TableDataInterface {
 
   // Allocates a new table data object.
   static ::util::StatusOr<std::unique_ptr<TdiSdeInterface::TableDataInterface>>
-  CreateTableData(const tdi::TdiInfo* tdi_info_, int table_id,
+  CreateTableData(const ::tdi::TdiInfo* tdi_info_, int table_id,
                   int action_id);
 
   // Stores the underlying SDE object.
-  std::unique_ptr<tdi::TableData> table_data_;
+  std::unique_ptr<::tdi::TableData> table_data_;
 
  private:
   TableData() {}
@@ -115,10 +115,10 @@ class TdiSdeWrapper : public TdiSdeInterface {
 
     static ::util::StatusOr<std::shared_ptr<TdiSdeInterface::SessionInterface>>
     CreateSession() {
-      std::shared_ptr<tdi::Session> tdi_session;
-      const tdi::Device *device = nullptr;
+      std::shared_ptr<::tdi::Session> tdi_session;
+      const ::tdi::Device *device = nullptr;
       uint32 dev_id = 0;
-      tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
+      ::tdi::DevMgr::getInstance().deviceGet(dev_id, &device);
       device->createSession(&tdi_session);
 
       CHECK_RETURN_IF_FALSE(tdi_session) << "Failed to create new session.";
@@ -128,12 +128,12 @@ class TdiSdeWrapper : public TdiSdeInterface {
     }
 
     // Stores the underlying SDE session.
-    std::shared_ptr<tdi::Session> tdi_session_;
+    std::shared_ptr<::tdi::Session> tdi_session_;
 
    private:
     // Private constructor. Use CreateSession() instead.
     Session() {}
-    explicit Session(std::shared_ptr<tdi::Session> tdi_session)
+    explicit Session(std::shared_ptr<::tdi::Session> tdi_session)
         : tdi_session_(tdi_session) {}
   };
 
@@ -493,7 +493,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
   std::unique_ptr<TdiIdMapper> tdi_id_mapper_ GUARDED_BY(data_lock_);
 
   // Pointer to the current BfR info object. Not owned by this class.
-  const tdi::TdiInfo* tdi_info_ GUARDED_BY(data_lock_);
+  const ::tdi::TdiInfo* tdi_info_ GUARDED_BY(data_lock_);
 
 };
 

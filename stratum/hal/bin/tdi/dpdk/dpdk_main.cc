@@ -45,6 +45,8 @@ namespace tdix {
       FLAGS_dpdk_sde_install, FLAGS_dpdk_infrap4d_cfg,
       FLAGS_dpdk_infrap4d_background));
 
+  /* ========== */
+  // NOTE: Rework for DPDK
   ASSIGN_OR_RETURN(bool is_sw_model,
                    sde_wrapper->IsSoftwareModel(device_id));
   const OperationMode mode =
@@ -53,6 +55,7 @@ namespace tdix {
   VLOG(1) << "Detected is_sw_model: " << is_sw_model;
   VLOG(1) << "SDE version: " << sde_wrapper->GetSdeVersion();
   VLOG(1) << "Switch SKU: " << sde_wrapper->GetBfChipType(device_id);
+  /* ========== */
 
   auto table_manager =
       TdiTableManager::CreateInstance(mode, sde_wrapper, device_id);
@@ -88,6 +91,7 @@ namespace tdix {
 
   // Create the 'Hal' class instance.
   auto* hal = DpdkHal::CreateSingleton(
+      // NOTE: Shouldn't first parameter be 'mode'?
       stratum::hal::OPERATION_MODE_STANDALONE, dpdk_switch.get(),
       auth_policy_checker.get());
   CHECK_RETURN_IF_FALSE(hal) << "Failed to create the Stratum Hal instance.";
