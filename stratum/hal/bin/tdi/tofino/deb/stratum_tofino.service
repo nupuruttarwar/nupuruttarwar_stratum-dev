@@ -3,7 +3,7 @@
 [Unit]
 Description=Stratum service
 Documentation=https://www.opennetworking.org/stratum/
-ConditionPathExists=/usr/bin/stratum_tdi
+ConditionPathExists=/usr/bin/stratum_tofino
 ConditionPathExists=/usr/bin/start-stratum.sh
 
 [Service]
@@ -11,9 +11,9 @@ Type=simple
 ExecStart=/bin/bash /usr/bin/start-stratum.sh
 Restart=on-failure
 WorkingDirectory=/var/run/stratum
-SyslogIdentifier=stratum-tdi
+SyslogIdentifier=stratum-tofino
 RuntimeDirectory=stratum
-EnvironmentFile=/etc/stratum/stratum_tdi.env
+EnvironmentFile=/etc/stratum/stratum_tofino.env
 StandardOutput=syslog
 StandardError=syslog
 

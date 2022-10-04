@@ -3,20 +3,20 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_MOCK_H_
-#define STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_MOCK_H_
+#ifndef STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_CHASSIS_MANAGER_MOCK_H_
+#define STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_CHASSIS_MANAGER_MOCK_H_
 
 #include <map>
 #include <memory>
 
 #include "gmock/gmock.h"
-#include "stratum/hal/lib/tdi/tdi_chassis_manager.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_chassis_manager.h"
 
 namespace stratum {
 namespace hal {
 namespace tdi {
 
-class TdiChassisManagerMock : public TdiChassisManager {
+class TofinoChassisManagerMock : public TofinoChassisManager {
  public:
   MOCK_METHOD1(PushChassisConfig, ::util::Status(const ChassisConfig& config));
   MOCK_METHOD1(VerifyChassisConfig,
@@ -47,4 +47,4 @@ class TdiChassisManagerMock : public TdiChassisManager {
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_MOCK_H_
+#endif  // STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_CHASSIS_MANAGER_MOCK_H_

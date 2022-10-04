@@ -5,8 +5,8 @@
 
 // The Hardware Abstraction Layer (HAL) of the stratum stack.
 
-#ifndef STRATUM_HAL_LIB_TDI_TDI_HAL_H_
-#define STRATUM_HAL_LIB_TDI_TDI_HAL_H_
+#ifndef STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_HAL_H_
+#define STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_HAL_H_
 
 #include <pthread.h>
 #include <signal.h>
@@ -28,20 +28,20 @@
 namespace stratum {
 namespace hal {
 
-// Class 'TdiHal' is nothing but a wrapper around all the HAL services, which
+// Class 'TofinoHal' is nothing but a wrapper around all the HAL services, which
 // implement the main functionality of HAL and handle all the gRPC calls, and
 // the '::gRPC::Server' class object which dispatches the calls etc. The intent
 // is to 1) put the common code for dealing with these two classes into one
 // place, and 2) control the server side parameters without affecting the rest
 // of the code. This class is initialized once and is accessed through its
 // singleton instance.
-class TdiHal final {
+class TofinoHal final {
  public:
-  virtual ~TdiHal();
+  virtual ~TofinoHal();
 
   // All the pre-setup sanity checks that need to be done before anything else.
   // Typically an error returned from this method is an indicator that we should
-  // not continue running TdiHal.
+  // not continue running TofinoHal.
   ::util::Status SanityCheck();
 
   // Sets up HAL in coldboot and warmboot mode.
@@ -76,27 +76,27 @@ class TdiHal final {
 
   // Creates the singleton instance. Expected to be called once to initialize
   // the instance.
-  static TdiHal* CreateSingleton(OperationMode mode,
-                                  SwitchInterface* switch_interface,
-                                  AuthPolicyChecker* auth_policy_checker)
+  static TofinoHal* CreateSingleton(OperationMode mode,
+                                    SwitchInterface* switch_interface,
+                                    AuthPolicyChecker* auth_policy_checker)
       LOCKS_EXCLUDED(init_lock_);
 
   // Return the singleton instance to be used in the signal handler..
-  static TdiHal* GetSingleton() LOCKS_EXCLUDED(init_lock_);
+  static TofinoHal* GetSingleton() LOCKS_EXCLUDED(init_lock_);
 
-  // TdiHal is neither copyable nor movable.
-  TdiHal(const TdiHal&) = delete;
-  TdiHal& operator=(const TdiHal&) = delete;
+  // TofinoHal is neither copyable nor movable.
+  TofinoHal(const TofinoHal&) = delete;
+  TofinoHal& operator=(const TofinoHal&) = delete;
 
-  // Pipe file descriptors used to deliver signals from the handler to TdiHal.
+  // Pipe file descriptors used to deliver signals from the handler to TofinoHal.
   static int pipe_read_fd_;
   static int pipe_write_fd_;
 
  private:
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  TdiHal(OperationMode mode, SwitchInterface* switch_interface,
-          AuthPolicyChecker* auth_policy_checker);
+  TofinoHal(OperationMode mode, SwitchInterface* switch_interface,
+            AuthPolicyChecker* auth_policy_checker);
 
   // Initializes the HAL server and all the services it provides. Called in
   // CreateSingleton() as soon as the class instance is created.
@@ -151,10 +151,10 @@ class TdiHal final {
   static absl::Mutex init_lock_;
 
   // The singleton instance.
-  static TdiHal* singleton_ GUARDED_BY(init_lock_);
+  static TofinoHal* singleton_ GUARDED_BY(init_lock_);
 };
 
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_TDI_TDI_HAL_H_
+#endif  // STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_HAL_H_

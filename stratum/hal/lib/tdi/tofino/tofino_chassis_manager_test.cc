@@ -4,7 +4,7 @@
 
 // adapted from bf_chassis_manager_test.cc
 
-#include "stratum/hal/lib/tdi/tdi_chassis_manager.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_chassis_manager.h"
 
 #include <string>
 #include <utility>
@@ -79,7 +79,7 @@ MATCHER_P(GnmiEventEq, event, "") {
 class ChassisConfigBuilder {
  public:
   explicit ChassisConfigBuilder(uint64 node_id = kNodeId) : node_id(node_id) {
-    config_.set_description("Test config for TdiChassisManager");
+    config_.set_description("Test config for TofinoChassisManager");
     auto* chassis = config_.mutable_chassis();
     chassis->set_platform(PLT_GENERIC_BAREFOOT_TOFINO);
     chassis->set_name("Tofino");
@@ -130,15 +130,15 @@ class ChassisConfigBuilder {
 
 }  // namespace
 
-class TdiChassisManagerTest : public ::testing::Test {
+class TofinoChassisManagerTest : public ::testing::Test {
  protected:
-  TdiChassisManagerTest() {}
+  TofinoChassisManagerTest() {}
 
   void SetUp() override {
     phal_mock_ = absl::make_unique<PhalMock>();
     tdi_sde_mock_ = absl::make_unique<TdiSdeMock>();
     // TODO(max): create parametrized test suite over mode.
-    tdi_chassis_manager_ = TdiChassisManager::CreateInstance(
+    tdi_chassis_manager_ = TofinoChassisManager::CreateInstance(
         OPERATION_MODE_STANDALONE, phal_mock_.get(), tdi_sde_mock_.get());
     ON_CALL(*tdi_sde_mock_, IsValidPort(_, _))
         .WillByDefault(
@@ -284,24 +284,24 @@ class TdiChassisManagerTest : public ::testing::Test {
   std::unique_ptr<PhalMock> phal_mock_;
   std::unique_ptr<TdiSdeMock> tdi_sde_mock_;
   std::unique_ptr<ChannelWriter<PortStatusEvent>> sde_event_writer_;
-  std::unique_ptr<TdiChassisManager> tdi_chassis_manager_;
+  std::unique_ptr<TofinoChassisManager> tdi_chassis_manager_;
 
   static constexpr int kTestTransceiverWriterId = 20;
 };
 
-TEST_F(TdiChassisManagerTest, PreFirstConfigPushState) {
+TEST_F(TofinoChassisManagerTest, PreFirstConfigPushState) {
   ASSERT_OK(CheckCleanInternalState());
   EXPECT_FALSE(Initialized());
   // TODO(antonin): add more checks (to verify that method calls fail as
   // expected)
 }
 
-TEST_F(TdiChassisManagerTest, FirstConfigPush) {
+TEST_F(TofinoChassisManagerTest, FirstConfigPush) {
   ASSERT_OK(PushBaseChassisConfig());
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, RemovePort) {
+TEST_F(TofinoChassisManagerTest, RemovePort) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
@@ -312,7 +312,7 @@ TEST_F(TdiChassisManagerTest, RemovePort) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, AddPortFec) {
+TEST_F(TofinoChassisManagerTest, AddPortFec) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
@@ -329,7 +329,7 @@ TEST_F(TdiChassisManagerTest, AddPortFec) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, SetPortLoopback) {
+TEST_F(TofinoChassisManagerTest, SetPortLoopback) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
@@ -345,7 +345,7 @@ TEST_F(TdiChassisManagerTest, SetPortLoopback) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, ApplyPortShaping) {
+TEST_F(TofinoChassisManagerTest, ApplyPortShaping) {
   const std::string kVendorConfigText = R"PROTO(
     tofino_config {
       node_id_to_port_shaping_config {
@@ -385,7 +385,7 @@ TEST_F(TdiChassisManagerTest, ApplyPortShaping) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, ApplyDeflectOnDrop) {
+TEST_F(TofinoChassisManagerTest, ApplyDeflectOnDrop) {
   const std::string kVendorConfigText = R"PROTO(
     tofino_config {
       node_id_to_deflect_on_drop_configs {
@@ -421,7 +421,7 @@ TEST_F(TdiChassisManagerTest, ApplyDeflectOnDrop) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, ReplayPorts) {
+TEST_F(TofinoChassisManagerTest, ReplayPorts) {
   const std::string kVendorConfigText = R"PROTO(
     tofino_config {
       node_id_to_deflect_on_drop_configs {
@@ -489,7 +489,7 @@ TEST_F(TdiChassisManagerTest, ReplayPorts) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, TransceiverEvent) {
+TEST_F(TofinoChassisManagerTest, TransceiverEvent) {
   ASSERT_OK(PushBaseChassisConfig());
   auto xcvr_event_writer = GetTransceiverEventWriter();
 
@@ -506,7 +506,7 @@ TEST_F(TdiChassisManagerTest, TransceiverEvent) {
 }
 
 template <typename T>
-T GetPortData(TdiChassisManager* tdi_chassis_manager_, uint64 node_id,
+T GetPortData(TofinoChassisManager* tdi_chassis_manager_, uint64 node_id,
               int port_id,
               DataRequest::Request::Port* (
                   DataRequest::Request::*get_mutable_message_func)(),
@@ -524,7 +524,7 @@ T GetPortData(TdiChassisManager* tdi_chassis_manager_, uint64 node_id,
 }
 
 template <typename T, typename U>
-void GetPortDataTest(TdiChassisManager* tdi_chassis_manager_, uint64 node_id,
+void GetPortDataTest(TofinoChassisManager* tdi_chassis_manager_, uint64 node_id,
                      int port_id,
                      DataRequest::Request::Port* (
                          DataRequest::Request::*get_mutable_message_func)(),
@@ -540,7 +540,7 @@ void GetPortDataTest(TdiChassisManager* tdi_chassis_manager_, uint64 node_id,
 }
 
 template <typename T>
-void GetPortDataTest(TdiChassisManager* tdi_chassis_manager_, uint64 node_id,
+void GetPortDataTest(TofinoChassisManager* tdi_chassis_manager_, uint64 node_id,
                      int port_id,
                      DataRequest::Request::Port* (
                          DataRequest::Request::*get_mutable_message_func)(),
@@ -555,7 +555,7 @@ void GetPortDataTest(TdiChassisManager* tdi_chassis_manager_, uint64 node_id,
   EXPECT_THAT(val, EqualsProto(expected_msg));
 }
 
-TEST_F(TdiChassisManagerTest, GetPortData) {
+TEST_F(TofinoChassisManagerTest, GetPortData) {
   ChassisConfigBuilder builder;
   ASSERT_OK(PushBaseChassisConfig(&builder));
 
@@ -761,7 +761,7 @@ TEST_F(TdiChassisManagerTest, GetPortData) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, UpdateInvalidPort) {
+TEST_F(TofinoChassisManagerTest, UpdateInvalidPort) {
   ASSERT_OK(PushBaseChassisConfig());
   ChassisConfigBuilder builder;
   const uint32 portId = kPortId + 1;
@@ -792,7 +792,7 @@ TEST_F(TdiChassisManagerTest, UpdateInvalidPort) {
   ASSERT_OK(ShutdownAndTestCleanState());
 }
 
-TEST_F(TdiChassisManagerTest, VerifyChassisConfigSuccess) {
+TEST_F(TofinoChassisManagerTest, VerifyChassisConfigSuccess) {
   const std::string kConfigText1 = R"(
       description: "Sample Generic Tofino config 2x25G ports."
       chassis {

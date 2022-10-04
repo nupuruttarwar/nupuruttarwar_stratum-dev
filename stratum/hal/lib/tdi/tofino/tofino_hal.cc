@@ -3,7 +3,7 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#include "stratum/hal/lib/tdi/tdi_hal.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_hal.h"
 
 #include <limits.h>
 #include <utility>
@@ -58,7 +58,7 @@ void SignalRcvCallback(int value) {
   // https://www.gnu.org/software/libc/manual/html_node/POSIX-Safety-Concepts.html
   int saved_errno = errno;
   // No reasonable error handling possible.
-  write(TdiHal::pipe_write_fd_, &value, sizeof(value));
+  write(TofinoHal::pipe_write_fd_, &value, sizeof(value));
   errno = saved_errno;
 }
 
@@ -78,13 +78,13 @@ void SetGrpcServerKeepAliveArgs(::grpc::ServerBuilder* builder) {
 
 }  // namespace
 
-TdiHal* TdiHal::singleton_ = nullptr;
-ABSL_CONST_INIT absl::Mutex TdiHal::init_lock_(absl::kConstInit);
-int TdiHal::pipe_read_fd_ = -1;
-int TdiHal::pipe_write_fd_ = -1;
+TofinoHal* TofinoHal::singleton_ = nullptr;
+ABSL_CONST_INIT absl::Mutex TofinoHal::init_lock_(absl::kConstInit);
+int TofinoHal::pipe_read_fd_ = -1;
+int TofinoHal::pipe_write_fd_ = -1;
 
-TdiHal::TdiHal(OperationMode mode, SwitchInterface* switch_interface,
-               AuthPolicyChecker* auth_policy_checker)
+TofinoHal::TofinoHal(OperationMode mode, SwitchInterface* switch_interface,
+                     AuthPolicyChecker* auth_policy_checker)
     : mode_(mode),
       switch_interface_(ABSL_DIE_IF_NULL(switch_interface)),
       auth_policy_checker_(ABSL_DIE_IF_NULL(auth_policy_checker)),
@@ -95,12 +95,12 @@ TdiHal::TdiHal(OperationMode mode, SwitchInterface* switch_interface,
       old_signal_handlers_(),
       signal_waiter_tid_(0) {}
 
-TdiHal::~TdiHal() {
+TofinoHal::~TofinoHal() {
   // TODO(unknown): Handle this error?
   UnregisterSignalHandlers().IgnoreError();
 }
 
-::util::Status TdiHal::SanityCheck() {
+::util::Status TofinoHal::SanityCheck() {
   const std::vector<std::string> external_stratum_urls =
       absl::StrSplit(FLAGS_external_stratum_urls, ',', absl::SkipEmpty());
   CHECK_RETURN_IF_FALSE(!external_stratum_urls.empty())
@@ -126,11 +126,11 @@ TdiHal::~TdiHal() {
   return ::util::OkStatus();
 }
 
-::util::Status TdiHal::Setup() {
+::util::Status TofinoHal::Setup() {
     return Setup(FLAGS_warmboot);
 }
 
-::util::Status TdiHal::Setup(bool warmboot) {
+::util::Status TofinoHal::Setup(bool warmboot) {
   LOG(INFO) << "Setting up HAL in "
             << (warmboot ? "WARMBOOT" : "COLDBOOT") << " mode...";
 
@@ -162,7 +162,7 @@ TdiHal::~TdiHal() {
   return ::util::OkStatus();
 }
 
-::util::Status TdiHal::Teardown() {
+::util::Status TofinoHal::Teardown() {
   // Teardown is called as part of both warmboot and coldboot shutdown. In case
   // of warmboot shutdown, the stack is first frozen by calling an RPC in
   // AdminService, which itself calls Freeze() method in SwitchInterface class.
@@ -181,7 +181,7 @@ TdiHal::~TdiHal() {
   return ::util::OkStatus();
 }
 
-::util::Status TdiHal::Run() {
+::util::Status TofinoHal::Run() {
   // All HAL external facing services listen to a list of secure external URLs
   // given by external_stratum_urls flag, as well as a local insecure URLs
   // given by local_stratum_url flag. The insecure URLs are used by any local
@@ -231,7 +231,7 @@ TdiHal::~TdiHal() {
   return Teardown();
 }
 
-void TdiHal::HandleSignal(int value) {
+void TofinoHal::HandleSignal(int value) {
   LOG(INFO) << "Received signal: " << strsignal(value);
   // Calling Shutdown() so the blocking call to Wait() returns.
   // NOTE: Seems like if there is an active stream Read(). Calling Shutdown()
@@ -241,12 +241,13 @@ void TdiHal::HandleSignal(int value) {
   external_server_->Shutdown(absl::ToChronoTime(absl::Now()));
 }
 
-TdiHal* TdiHal::CreateSingleton(OperationMode mode,
-                                SwitchInterface* switch_interface,
-                                AuthPolicyChecker* auth_policy_checker) {
+TofinoHal* TofinoHal::CreateSingleton(
+    OperationMode mode,
+    SwitchInterface* switch_interface,
+    AuthPolicyChecker* auth_policy_checker) {
   absl::WriterMutexLock l(&init_lock_);
   if (!singleton_) {
-    singleton_ = new TdiHal(mode, switch_interface, auth_policy_checker);
+    singleton_ = new TofinoHal(mode, switch_interface, auth_policy_checker);
 
     ::util::Status status = singleton_->RegisterSignalHandlers();
     if (!status.ok()) {
@@ -266,7 +267,7 @@ TdiHal* TdiHal::CreateSingleton(OperationMode mode,
   return singleton_;
 }
 
-TdiHal* TdiHal::GetSingleton() {
+TofinoHal* TofinoHal::GetSingleton() {
   absl::ReaderMutexLock l(&init_lock_);
   return singleton_;
 }
@@ -278,7 +279,7 @@ TdiHal* TdiHal::GetSingleton() {
            << "multiple times.";                                              \
   }
 
-::util::Status TdiHal::InitializeServer() {
+::util::Status TofinoHal::InitializeServer() {
   CHECK_IS_NULL(config_monitoring_service_);
   CHECK_IS_NULL(p4_service_);
   CHECK_IS_NULL(external_server_);
@@ -300,7 +301,7 @@ TdiHal* TdiHal::GetSingleton() {
 
 #undef CHECK_IS_NULL  // should not be used in any other method.
 
-::util::Status TdiHal::RegisterSignalHandlers() {
+::util::Status TofinoHal::RegisterSignalHandlers() {
   // Register the signal handlers and save the old handlers as well.
   std::vector<int> sig = {SIGINT, SIGTERM, SIGUSR2};
   for (const int s : sig) {
@@ -323,7 +324,7 @@ TdiHal* TdiHal::GetSingleton() {
   return ::util::OkStatus();
 }
 
-::util::Status TdiHal::UnregisterSignalHandlers() {
+::util::Status TofinoHal::UnregisterSignalHandlers() {
   // Register the old handlers for all the signals.
   for (const auto& e : old_signal_handlers_) {
     signal(e.first, e.second);
@@ -340,9 +341,9 @@ TdiHal* TdiHal::GetSingleton() {
   return ::util::OkStatus();
 }
 
-void* TdiHal::SignalWaiterThreadFunc(void*) {
+void* TofinoHal::SignalWaiterThreadFunc(void*) {
   int signal_value;
-  int ret = read(TdiHal::pipe_read_fd_, &signal_value, sizeof(signal_value));
+  int ret = read(TofinoHal::pipe_read_fd_, &signal_value, sizeof(signal_value));
   if (ret == 0) {  // Pipe has been closed.
     return nullptr;
   } else if (ret != sizeof(signal_value)) {
@@ -350,7 +351,7 @@ void* TdiHal::SignalWaiterThreadFunc(void*) {
                << strerror(errno);
     return nullptr;
   }
-  TdiHal* hal = TdiHal::GetSingleton();
+  TofinoHal* hal = TofinoHal::GetSingleton();
   if (hal == nullptr) return nullptr;
   hal->HandleSignal(signal_value);
 

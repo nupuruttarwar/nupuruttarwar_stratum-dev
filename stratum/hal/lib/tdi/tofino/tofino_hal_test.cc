@@ -6,7 +6,7 @@
 // adapted from ipdk/ipdk_hal_test.cc, which was
 // adapted from common/hal_test.cc
 
-#include "stratum/hal/lib/tdi/tdi_hal.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_hal.h"
 
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
@@ -39,7 +39,7 @@ using ::testing::Return;
 
 MATCHER_P(EqualsProto, proto, "") { return ProtoEqual(arg, proto); }
 
-class TdiHalTest : public ::testing::Test {
+class TofinoHalTest : public ::testing::Test {
  protected:
   static const std::string RandomURL() {
     // Every call to PickUnusedPortOrDie() will return a new port number.
@@ -48,12 +48,12 @@ class TdiHalTest : public ::testing::Test {
 
   // Per-test-case set-up.
   static void SetUpTestCase() {
-    // Set up TdiHal class instance under test.
+    // Set up TofinoHal class instance under test.
     switch_mock_ = new ::testing::StrictMock<SwitchMock>();
     auth_policy_checker_mock_ =
         new ::testing::StrictMock<AuthPolicyCheckerMock>();
-    hal_ = TdiHal::CreateSingleton(kMode, switch_mock_,
-                                    auth_policy_checker_mock_);
+    hal_ = TofinoHal::CreateSingleton(
+	kMode, switch_mock_, auth_policy_checker_mock_);
     ASSERT_NE(hal_, nullptr);
   }
 
@@ -152,24 +152,24 @@ class TdiHalTest : public ::testing::Test {
   static ::testing::StrictMock<SwitchMock>* switch_mock_;
   static ::testing::StrictMock<AuthPolicyCheckerMock>*
       auth_policy_checker_mock_;
-  static TdiHal* hal_;  // points to the singleton instance
+  static TofinoHal* hal_;  // points to the singleton instance
 };
 
-constexpr char TdiHalTest::kChassisConfigTemplate[];
-constexpr char TdiHalTest::kForwardingPipelineConfigsTemplate[];
-constexpr char TdiHalTest::kErrorMsg[];
-constexpr uint64 TdiHalTest::kNodeId1;
-constexpr uint64 TdiHalTest::kNodeId2;
-constexpr int TdiHalTest::kUnit1;
-constexpr int TdiHalTest::kUnit2;
-constexpr OperationMode TdiHalTest::kMode;
+constexpr char TofinoHalTest::kChassisConfigTemplate[];
+constexpr char TofinoHalTest::kForwardingPipelineConfigsTemplate[];
+constexpr char TofinoHalTest::kErrorMsg[];
+constexpr uint64 TofinoHalTest::kNodeId1;
+constexpr uint64 TofinoHalTest::kNodeId2;
+constexpr int TofinoHalTest::kUnit1;
+constexpr int TofinoHalTest::kUnit2;
+constexpr OperationMode TofinoHalTest::kMode;
 
-::testing::StrictMock<SwitchMock>* TdiHalTest::switch_mock_ = nullptr;
+::testing::StrictMock<SwitchMock>* TofinoHalTest::switch_mock_ = nullptr;
 ::testing::StrictMock<AuthPolicyCheckerMock>*
-    TdiHalTest::auth_policy_checker_mock_ = nullptr;
-TdiHal* TdiHalTest::hal_ = nullptr;
+    TofinoHalTest::auth_policy_checker_mock_ = nullptr;
+TofinoHal* TofinoHalTest::hal_ = nullptr;
 
-TEST_F(TdiHalTest, SanityCheckFailureWhenExtURLsNotGiven) {
+TEST_F(TofinoHalTest, SanityCheckFailureWhenExtURLsNotGiven) {
   FLAGS_external_stratum_urls = "";
   ::util::Status status = hal_->SanityCheck();
   ASSERT_FALSE(status.ok());
@@ -177,7 +177,7 @@ TEST_F(TdiHalTest, SanityCheckFailureWhenExtURLsNotGiven) {
               HasSubstr("No external URLs were specified"));
 }
 
-TEST_F(TdiHalTest, SanityCheckFailureWhenExtURLsAreInvalid) {
+TEST_F(TofinoHalTest, SanityCheckFailureWhenExtURLsAreInvalid) {
   const auto& url = RandomURL();
   FLAGS_external_stratum_urls = absl::StrJoin({url, std::string("blah")}, ",");
   FLAGS_local_stratum_url = url;
@@ -188,7 +188,7 @@ TEST_F(TdiHalTest, SanityCheckFailureWhenExtURLsAreInvalid) {
 }
 
 #if 0
-TEST_F(TdiHalTest, SanityCheckFailureWhenPersistentConfigDirFlagNotGiven) {
+TEST_F(TofinoHalTest, SanityCheckFailureWhenPersistentConfigDirFlagNotGiven) {
   FLAGS_persistent_config_dir = "";
   ::util::Status status = hal_->SanityCheck();
   ASSERT_FALSE(status.ok());
@@ -198,7 +198,7 @@ TEST_F(TdiHalTest, SanityCheckFailureWhenPersistentConfigDirFlagNotGiven) {
 }
 #endif
 
-TEST_F(TdiHalTest, ColdbootSetupSuccessForSavedConfigs) {
+TEST_F(TofinoHalTest, ColdbootSetupSuccessForSavedConfigs) {
   // Setup and save the test config(s).
   ChassisConfig chassis_config;
   ForwardingPipelineConfigs forwarding_pipeline_configs;
@@ -231,7 +231,7 @@ TEST_F(TdiHalTest, ColdbootSetupSuccessForSavedConfigs) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, ColdbootSetupSuccessForNoSavedConfigAtAll) {
+TEST_F(TofinoHalTest, ColdbootSetupSuccessForNoSavedConfigAtAll) {
   // Delete all the saved chassis config. There will be no config push at all.
   if (PathExists(FLAGS_chassis_config_file)) {
     ASSERT_OK(RemoveFile(FLAGS_chassis_config_file));
@@ -247,7 +247,7 @@ TEST_F(TdiHalTest, ColdbootSetupSuccessForNoSavedConfigAtAll) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, ColdbootSetupSuccessForNoForwardingPipelineConfig) {
+TEST_F(TofinoHalTest, ColdbootSetupSuccessForNoForwardingPipelineConfig) {
   // Save the chassis config but delete the saved forwarding pipeline config.
   // There will be chassis config push but no forwarding pipeline config push.
   ChassisConfig chassis_config;
@@ -266,7 +266,7 @@ TEST_F(TdiHalTest, ColdbootSetupSuccessForNoForwardingPipelineConfig) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, ColdbootSetupSuccessForNoChassisConfig) {
+TEST_F(TofinoHalTest, ColdbootSetupSuccessForNoChassisConfig) {
   // Save the forwarding pipeline config but delete the saved chassis config.
   // There will be forwarding pipeline config push but no chassis config push.
   ForwardingPipelineConfigs forwarding_pipeline_configs;
@@ -297,7 +297,7 @@ TEST_F(TdiHalTest, ColdbootSetupSuccessForNoChassisConfig) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, ColdbootSetupFailureWhenChassisConfigPushFails) {
+TEST_F(TofinoHalTest, ColdbootSetupFailureWhenChassisConfigPushFails) {
   // Setup and save the test config(s).
   ChassisConfig chassis_config;
   ForwardingPipelineConfigs forwarding_pipeline_configs;
@@ -319,7 +319,7 @@ TEST_F(TdiHalTest, ColdbootSetupFailureWhenChassisConfigPushFails) {
   EXPECT_THAT(errors[0].error_message(), HasSubstr("saved chassis config"));
 }
 
-TEST_F(TdiHalTest, ColdbootSetupFailureWhenPipelineConfigPushFailsForSomeNodes) {
+TEST_F(TofinoHalTest, ColdbootSetupFailureWhenPipelineConfigPushFailsForSomeNodes) {
   // Setup and save the test config(s).
   ChassisConfig chassis_config;
   ForwardingPipelineConfigs forwarding_pipeline_configs;
@@ -356,7 +356,7 @@ TEST_F(TdiHalTest, ColdbootSetupFailureWhenPipelineConfigPushFailsForSomeNodes) 
               HasSubstr("saved forwarding pipeline configs"));
 }
 
-TEST_F(TdiHalTest, WarmbootSetupSuccessForSavedConfig) {
+TEST_F(TofinoHalTest, WarmbootSetupSuccessForSavedConfig) {
   // Setup and save the test config(s).
   ChassisConfig chassis_config;
   ForwardingPipelineConfigs forwarding_pipeline_configs;
@@ -372,7 +372,7 @@ TEST_F(TdiHalTest, WarmbootSetupSuccessForSavedConfig) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, WarmbootbootSetupFailureForNoSavedConfig) {
+TEST_F(TofinoHalTest, WarmbootbootSetupFailureForNoSavedConfig) {
   // Delete the saved chassis config. There will be no chassis config push and
   // the call will fail.
   if (PathExists(FLAGS_chassis_config_file)) {
@@ -388,7 +388,7 @@ TEST_F(TdiHalTest, WarmbootbootSetupFailureForNoSavedConfig) {
   EXPECT_THAT(errors[0].error_message(), HasSubstr("saved chassis config"));
 }
 
-TEST_F(TdiHalTest, WarmbootSetupFailureWhenUnfreezeFails) {
+TEST_F(TofinoHalTest, WarmbootSetupFailureWhenUnfreezeFails) {
   // Setup and save the test config(s).
   ChassisConfig chassis_config;
   ForwardingPipelineConfigs forwarding_pipeline_configs;
@@ -410,7 +410,7 @@ TEST_F(TdiHalTest, WarmbootSetupFailureWhenUnfreezeFails) {
   EXPECT_THAT(errors[0].error_message(), HasSubstr("unfreeze"));
 }
 
-TEST_F(TdiHalTest, ColdbootTeardownSuccess) {
+TEST_F(TofinoHalTest, ColdbootTeardownSuccess) {
   EXPECT_CALL(*switch_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*auth_policy_checker_mock_, Shutdown())
       .WillOnce(Return(::util::OkStatus()));
@@ -424,7 +424,7 @@ TEST_F(TdiHalTest, ColdbootTeardownSuccess) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, ColdbootTeardownFailureWhenSwitchInterfaceShutdownFails) {
+TEST_F(TofinoHalTest, ColdbootTeardownFailureWhenSwitchInterfaceShutdownFails) {
   EXPECT_CALL(*switch_mock_, Shutdown())
       .WillOnce(
           Return(::util::Status(StratumErrorSpace(), ERR_INTERNAL, kErrorMsg)));
@@ -442,7 +442,7 @@ TEST_F(TdiHalTest, ColdbootTeardownFailureWhenSwitchInterfaceShutdownFails) {
   EXPECT_THAT(errors[0].error_message(), HasSubstr("shut down"));
 }
 
-TEST_F(TdiHalTest, ColdbootTeardownFailureWhenAuthPolicyCheckerShutdownFails) {
+TEST_F(TofinoHalTest, ColdbootTeardownFailureWhenAuthPolicyCheckerShutdownFails) {
   EXPECT_CALL(*switch_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*auth_policy_checker_mock_, Shutdown())
       .WillOnce(
@@ -459,7 +459,7 @@ TEST_F(TdiHalTest, ColdbootTeardownFailureWhenAuthPolicyCheckerShutdownFails) {
   EXPECT_THAT(errors[0].error_message(), HasSubstr("shut down"));
 }
 
-TEST_F(TdiHalTest, WarmbootTeardownSuccess) {
+TEST_F(TofinoHalTest, WarmbootTeardownSuccess) {
   EXPECT_CALL(*switch_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*auth_policy_checker_mock_, Shutdown())
       .WillOnce(Return(::util::OkStatus()));
@@ -472,7 +472,7 @@ TEST_F(TdiHalTest, WarmbootTeardownSuccess) {
   EXPECT_TRUE(errors.empty());
 }
 
-TEST_F(TdiHalTest, WarmbootTeardownFailure) {
+TEST_F(TofinoHalTest, WarmbootTeardownFailure) {
   EXPECT_CALL(*switch_mock_, Shutdown())
       .WillOnce(
           Return(::util::Status(StratumErrorSpace(), ERR_INTERNAL, kErrorMsg)));
@@ -495,7 +495,7 @@ namespace {
 
 void* TestShutdownThread(void* arg) {
   sleep(3);  // some sleep to emulate a task.
-  static_cast<TdiHal*>(arg)->HandleSignal(SIGINT);
+  static_cast<TofinoHal*>(arg)->HandleSignal(SIGINT);
   return nullptr;
 }
 

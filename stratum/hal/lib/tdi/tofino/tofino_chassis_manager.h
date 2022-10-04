@@ -2,8 +2,8 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_H_
-#define STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_H_
+#ifndef STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_CHASSIS_MANAGER_H_
+#define STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_CHASSIS_MANAGER_H_
 
 #include <map>
 #include <memory>
@@ -28,9 +28,9 @@ namespace tdi {
 // Lock which protects chassis state across the entire switch.
 extern absl::Mutex chassis_lock;
 
-class TdiChassisManager {
+class TofinoChassisManager {
  public:
-  virtual ~TdiChassisManager();
+  virtual ~TofinoChassisManager();
 
   virtual ::util::Status PushChassisConfig(const ChassisConfig& config)
       EXCLUSIVE_LOCKS_REQUIRED(chassis_lock);
@@ -72,25 +72,25 @@ class TdiChassisManager {
       SHARED_LOCKS_REQUIRED(chassis_lock);
 
   // Factory function for creating the instance of the class.
-  static std::unique_ptr<TdiChassisManager> CreateInstance(
+  static std::unique_ptr<TofinoChassisManager> CreateInstance(
       OperationMode mode, PhalInterface* phal_interface,
       TdiSdeInterface* tdi_sde_interface);
 
-  // TdiChassisManager is neither copyable nor movable.
-  TdiChassisManager(const TdiChassisManager&) = delete;
-  TdiChassisManager& operator=(const TdiChassisManager&) = delete;
-  TdiChassisManager(TdiChassisManager&&) = delete;
-  TdiChassisManager& operator=(TdiChassisManager&&) = delete;
+  // TofinoChassisManager is neither copyable nor movable.
+  TofinoChassisManager(const TofinoChassisManager&) = delete;
+  TofinoChassisManager& operator=(const TofinoChassisManager&) = delete;
+  TofinoChassisManager(TofinoChassisManager&&) = delete;
+  TofinoChassisManager& operator=(TofinoChassisManager&&) = delete;
 
  protected:
   // Default constructor. To be called by the Mock class instance only.
-  TdiChassisManager();
+  TofinoChassisManager();
 
  private:
   // ReaderArgs encapsulates the arguments for a Channel reader thread.
   template <typename T>
   struct ReaderArgs {
-    TdiChassisManager* manager;
+    TofinoChassisManager* manager;
     std::unique_ptr<ChannelReader<T>> reader;
   };
 
@@ -117,8 +117,8 @@ class TdiChassisManager {
 
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  TdiChassisManager(OperationMode mode, PhalInterface* phal_interface,
-                    TdiSdeInterface* tdi_sde_interface);
+  TofinoChassisManager(OperationMode mode, PhalInterface* phal_interface,
+		       TdiSdeInterface* tdi_sde_interface);
 
   ::util::StatusOr<const PortConfig*> GetPortConfig(uint64 node_id,
                                                     uint32 port_id) const
@@ -152,7 +152,7 @@ class TdiChassisManager {
   // a ChannelReader thread which processes transceiver module insert/removal
   // events. Port is the 1-based frontpanel port number.
   // NOTE: This method should never be executed directly from a context which
-  // first accesses the internal structures of a class below TdiChassisManager
+  // first accesses the internal structures of a class below TofinoChassisManager
   // as this may result in deadlock.
   void TransceiverEventHandler(int slot, int port, HwState new_state)
       LOCKS_EXCLUDED(chassis_lock);
@@ -172,7 +172,7 @@ class TdiChassisManager {
   // thread which processes SDE port status events. Port is the sdk port number
   // used by the SDE. NOTE: This method should never be executed directly from a
   // context which first accesses the internal structures of a class below
-  // TdiChassisManager as this may result in deadlock.
+  // TofinoChassisManager as this may result in deadlock.
   void PortStatusEventHandler(int device, int port, PortState new_state,
                               absl::Time time_last_changed)
       LOCKS_EXCLUDED(chassis_lock);
@@ -292,11 +292,11 @@ class TdiChassisManager {
   // Pointer to a TdiSdeInterface implementation that wraps all the SDE calls.
   TdiSdeInterface* tdi_sde_interface_;  // not owned by this class.
 
-  friend class TdiChassisManagerTest;
+  friend class TofinoChassisManagerTest;
 };
 
 }  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_H_
+#endif  // STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_CHASSIS_MANAGER_H_

@@ -56,7 +56,7 @@ bmv2_configure(name = "local_bmv2_bin")
 load("//stratum/hal/lib/barefoot:barefoot.bzl", "barefoot_configure")
 barefoot_configure(name = "local_barefoot_bin")
 
-load("//stratum/hal/lib/tdi:tofino.bzl", "tofino_configure")
+load("//stratum/hal/lib/tdi/tofino:tofino.bzl", "tofino_configure")
 tofino_configure(name = "local_tofino_bin")
 
 load("//stratum/hal/bin/np4intel:np4intel.bzl", "np4intel_configure")
