@@ -33,7 +33,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 TdiIdMapper::TdiIdMapper()
     : tdi_to_p4info_id_(),
@@ -46,7 +46,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
 }
 
 ::util::Status TdiIdMapper::PushForwardingPipelineConfig(
-    const TdiDeviceConfig& config, const tdi::TdiInfo* tdi_info) {
+    const TdiDeviceConfig& config, const ::tdi::TdiInfo* tdi_info) {
   absl::WriterMutexLock l(&lock_);
 
   // Builds mapping between p4info and TDI info
@@ -116,8 +116,8 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
 
 ::util::Status TdiIdMapper::BuildMapping(uint32 p4info_id,
                                           std::string p4info_name,
-                                          const tdi::TdiInfo* tdi_info) {
-  const tdi::Table* table;
+                                          const ::tdi::TdiInfo* tdi_info) {
+  const ::tdi::Table* table;
   auto tdi_status = tdi_info->tableFromIdGet(p4info_id, &table);
 
   if (tdi_status == TDI_SUCCESS) {
@@ -143,7 +143,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
   // Special case: TDI includes pipeline name as prefix (e.g., "pipe."), but
   // p4info doesn't. We need to scan all tables to see if there is a table
   // called "[pipeline name].[P4 info table name]"
-  std::vector<const tdi::Table*> tdi_tables;
+  std::vector<const ::tdi::Table*> tdi_tables;
   RETURN_IF_TDI_ERROR(tdi_info->tablesGet(&tdi_tables));
   for (const auto* table : tdi_tables) {
     tdi_id_t table_id;
@@ -162,7 +162,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
 }
 
 ::util::Status TdiIdMapper::BuildActionProfileMapping(
-    const p4::config::v1::P4Info& p4info, const tdi::TdiInfo* tdi_info,
+    const p4::config::v1::P4Info& p4info, const ::tdi::TdiInfo* tdi_info,
     const std::string& context_json_content) {
   absl::flat_hash_map<std::string, std::string> prof_to_sel;
   try {
@@ -208,7 +208,7 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
   // Searching all action profile and selector tables from tdi.json
   absl::flat_hash_map<std::string, tdi_id_t> act_prof_tdi_ids;
   absl::flat_hash_map<std::string, tdi_id_t> selector_tdi_ids;
-  std::vector<const tdi::Table*> tdi_tables;
+  std::vector<const ::tdi::Table*> tdi_tables;
   RETURN_IF_TDI_ERROR(tdi_info->tablesGet(&tdi_tables));
   for (const auto* table : tdi_tables) {
     std::string table_name;
@@ -298,6 +298,6 @@ std::unique_ptr<TdiIdMapper> TdiIdMapper::CreateInstance() {
   return gtl::FindOrDie(act_selector_to_profile_mapping_, action_selector_id);
 }
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

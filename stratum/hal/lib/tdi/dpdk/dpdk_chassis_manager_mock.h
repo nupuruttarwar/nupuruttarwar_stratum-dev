@@ -1,22 +1,22 @@
 // Copyright 2018 Google LLC
 // Copyright 2018-present Open Networking Foundation
-// Copyright 2022 Intel Corporation
+// Copyright 2022 Intel Corporation.
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_MOCK_H_
-#define STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_MOCK_H_
+#ifndef STRATUM_HAL_LIB_TDI_DPDK_DPDK_CHASSIS_MANAGER_MOCK_H_
+#define STRATUM_HAL_LIB_TDI_DPDK_DPDK_CHASSIS_MANAGER_MOCK_H_
 
 #include <map>
 #include <memory>
 
 #include "gmock/gmock.h"
-#include "stratum/hal/lib/tdi/tdi_chassis_manager.h"
+#include "stratum/hal/lib/tdi/dpdk/dpdk_chassis_manager.h"
 
 namespace stratum {
 namespace hal {
 namespace tdi {
 
-class TdiChassisManagerMock : public TdiChassisManager {
+class DpdkChassisManagerMock : public DpdkChassisManager {
  public:
   MOCK_METHOD1(PushChassisConfig, ::util::Status(const ChassisConfig& config));
   MOCK_METHOD1(VerifyChassisConfig,
@@ -34,10 +34,10 @@ class TdiChassisManagerMock : public TdiChassisManager {
                ::util::StatusOr<absl::Time>(uint64 node_id, uint32 port_id));
   MOCK_METHOD3(GetPortCounters, ::util::Status(uint64 node_id, uint32 port_id,
                                                PortCounters* counters));
-  MOCK_METHOD1(ReplayPortsConfig, ::util::Status(uint64 node_id));
-  MOCK_METHOD3(GetFrontPanelPortInfo,
-               ::util::Status(uint64 node_id, uint32 port_id,
-                              FrontPanelPortInfo* fp_port_info));
+//  MOCK_METHOD1(ReplayPortsConfig, ::util::Status(uint64 node_id));
+//  MOCK_METHOD3(GetFrontPanelPortInfo,
+//               ::util::Status(uint64 node_id, uint32 port_id,
+//                              FrontPanelPortInfo* fp_port_info));
   MOCK_CONST_METHOD0(GetNodeIdToUnitMap,
                      ::util::StatusOr<std::map<uint64, int>>());
   MOCK_CONST_METHOD1(GetUnitFromNodeId, ::util::StatusOr<int>(uint64 node_id));
@@ -47,4 +47,4 @@ class TdiChassisManagerMock : public TdiChassisManager {
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_TDI_TDI_CHASSIS_MANAGER_MOCK_H_
+#endif  // STRATUM_HAL_LIB_TDI_DPDK_DPDK_CHASSIS_MANAGER_MOCK_H_

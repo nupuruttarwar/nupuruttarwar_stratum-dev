@@ -12,27 +12,28 @@
 
 #include "absl/memory/memory.h"
 #include "stratum/glue/status/status_macros.h"
+#include "stratum/hal/lib/common/proto_oneof_writer_wrapper.h"
+#include "stratum/hal/lib/common/writer_interface.h"
 #include "stratum/hal/lib/tdi/tdi_pipeline_utils.h"
 #include "stratum/hal/lib/tdi/tdi_sde_interface.h"
 #include "stratum/hal/lib/tdi/tdi_constants.h"
-#include "stratum/hal/lib/common/proto_oneof_writer_wrapper.h"
-#include "stratum/hal/lib/common/writer_interface.h"
 #include "stratum/lib/macros.h"
 #include "stratum/lib/utils.h"
 #include "stratum/public/proto/error.pb.h"
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 TdiNode::TdiNode(TdiTableManager* tdi_table_manager,
                  TdiActionProfileManager* tdi_action_profile_manager,
                  TdiPacketioManager* tdi_packetio_manager,
                  TdiPreManager* tdi_pre_manager,
                  TdiCounterManager* tdi_counter_manager,
-                 TdiSdeInterface* tdi_sde_interface, int device_id)
+                 TdiSdeInterface* tdi_sde_interface, int device_id,
+                 bool initialized, uint64 node_id)
     : pipeline_initialized_(false),
-      initialized_(true),
+      initialized_(initialized),
       tdi_config_(),
       tdi_sde_interface_(ABSL_DIE_IF_NULL(tdi_sde_interface)),
       tdi_table_manager_(ABSL_DIE_IF_NULL(tdi_table_manager)),
@@ -41,7 +42,7 @@ TdiNode::TdiNode(TdiTableManager* tdi_table_manager,
       tdi_packetio_manager_(tdi_packetio_manager),
       tdi_pre_manager_(ABSL_DIE_IF_NULL(tdi_pre_manager)),
       tdi_counter_manager_(ABSL_DIE_IF_NULL(tdi_counter_manager)),
-      node_id_(1),
+      node_id_(node_id),
       device_id_(device_id) {}
 
 TdiNode::TdiNode()
@@ -64,11 +65,14 @@ std::unique_ptr<TdiNode> TdiNode::CreateInstance(
     TdiTableManager* tdi_table_manager,
     TdiActionProfileManager* tdi_action_profile_manager,
     TdiPacketioManager* tdi_packetio_manager,
-    TdiPreManager* tdi_pre_manager, TdiCounterManager* tdi_counter_manager,
-    TdiSdeInterface* tdi_sde_interface, int device_id) {
+    TdiPreManager* tdi_pre_manager,
+    TdiCounterManager* tdi_counter_manager,
+    TdiSdeInterface* tdi_sde_interface, int device_id,
+    bool initialized, uint64 node_id) {
   return absl::WrapUnique(new TdiNode(
       tdi_table_manager, tdi_action_profile_manager, tdi_packetio_manager,
-      tdi_pre_manager, tdi_counter_manager, tdi_sde_interface, device_id));
+      tdi_pre_manager, tdi_counter_manager, tdi_sde_interface, device_id,
+      initialized, node_id));
 }
 
 ::util::Status TdiNode::PushChassisConfig(const ChassisConfig& config,
@@ -446,6 +450,6 @@ std::unique_ptr<TdiNode> TdiNode::CreateInstance(
   }
 }
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

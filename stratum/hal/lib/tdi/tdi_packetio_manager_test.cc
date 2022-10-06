@@ -19,7 +19,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 using test_utils::EqualsProto;
 using test_utils::StatusIs;
@@ -345,6 +345,6 @@ TEST_F(TdiPacketioManagerTest, TestPacketIn) {
   EXPECT_OK(Shutdown());
 }
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

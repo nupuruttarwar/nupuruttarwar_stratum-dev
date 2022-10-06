@@ -3,10 +3,9 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-// adapted from ipdk_switch_test, which was
 // adapted from bcm_switch_test
 
-#include "stratum/hal/lib/tdi/tdi_switch.h"
+#include "stratum/hal/lib/tdi/dpdk/dpdk_switch.h"
 
 #include <utility>
 
@@ -16,10 +15,9 @@
 #include "stratum/glue/status/canonical_errors.h"
 #include "stratum/glue/status/status_test_util.h"
 #include "stratum/hal/lib/common/gnmi_events.h"
-#include "stratum/hal/lib/common/phal_mock.h"
 #include "stratum/hal/lib/common/writer_mock.h"
 #include "stratum/hal/lib/p4/p4_table_mapper_mock.h"
-#include "stratum/hal/lib/tdi/tdi_chassis_manager_mock.h"
+#include "stratum/hal/lib/tdi/dpdk/dpdk_chassis_manager_mock.h"
 #include "stratum/hal/lib/tdi/tdi_node_mock.h"
 #include "stratum/hal/lib/tdi/tdi_sde_mock.h"
 #include "stratum/lib/channel/channel_mock.h"
@@ -72,20 +70,18 @@ const std::map<uint64, int>& NodeIdToUnitMap() {
   return *map;
 }
 
-class TdiSwitchTest : public ::testing::Test {
+class DpdkSwitchTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Use NiceMock to suppress "uninteresting mock function call" warnings
-    phal_mock_ = absl::make_unique<NiceMock<PhalMock>>();
     sde_mock_ = absl::make_unique<NiceMock<TdiSdeMock>>();
-    chassis_manager_mock_ = absl::make_unique<NiceMock<TdiChassisManagerMock>>();
+    chassis_manager_mock_ = absl::make_unique<NiceMock<DpdkChassisManagerMock>>();
     node_mock_ = absl::make_unique<NiceMock<TdiNodeMock>>();
-    unit_to_ipdk_node_mock_[kUnit] = node_mock_.get();
-    switch_ = TdiSwitch::CreateInstance(
-        phal_mock_.get(),
+    unit_to_tdi_node_mock_[kUnit] = node_mock_.get();
+    switch_ = DpdkSwitch::CreateInstance(
         chassis_manager_mock_.get(),
         sde_mock_.get(),
-        unit_to_ipdk_node_mock_);
+        unit_to_tdi_node_mock_);
 #if 0
     // no 'shutdown'
     shutdown = false;  // global variable initialization
@@ -95,7 +91,7 @@ class TdiSwitchTest : public ::testing::Test {
         .WillByDefault(Return(NodeIdToUnitMap()));
   }
 
-  void TearDown() override { unit_to_ipdk_node_mock_.clear(); }
+  void TearDown() override { unit_to_tdi_node_mock_.clear(); }
 
   // This operation should always succeed.
   // We use it to set up a number of test cases.
@@ -112,19 +108,18 @@ class TdiSwitchTest : public ::testing::Test {
     return ::util::Status(StratumErrorSpace(), ERR_UNKNOWN, kErrorMsg);
   }
 
-  std::unique_ptr<PhalMock> phal_mock_;
   std::unique_ptr<TdiSdeMock> sde_mock_;
-  std::unique_ptr<TdiChassisManagerMock> chassis_manager_mock_;
+  std::unique_ptr<DpdkChassisManagerMock> chassis_manager_mock_;
   std::unique_ptr<TdiNodeMock> node_mock_;
-  std::map<int, TdiNode*> unit_to_ipdk_node_mock_;
-  std::unique_ptr<TdiSwitch> switch_;
+  std::map<int, TdiNode*> unit_to_tdi_node_mock_;
+  std::unique_ptr<DpdkSwitch> switch_;
 };
 
-TEST_F(TdiSwitchTest, PushChassisConfigSucceeds) {
+TEST_F(DpdkSwitchTest, PushChassisConfigSucceeds) {
     PushChassisConfigSuccessfully();
 }
 
-TEST_F(TdiSwitchTest, PushChassisConfigFailsWhenNodePushFails) {
+TEST_F(DpdkSwitchTest, PushChassisConfigFailsWhenNodePushFails) {
   ChassisConfig config;
   config.add_nodes()->set_id(kNodeId);
   EXPECT_CALL(*node_mock_, PushChassisConfig(EqualsProto(config), kNodeId))
@@ -134,43 +129,28 @@ TEST_F(TdiSwitchTest, PushChassisConfigFailsWhenNodePushFails) {
               DerivedFromStatus(DefaultError()));
 }
 
-TEST_F(TdiSwitchTest, VerifyChassisConfigSucceeds) {
+TEST_F(DpdkSwitchTest, VerifyChassisConfigSucceeds) {
   ChassisConfig config;
   config.add_nodes()->set_id(kNodeId);
   EXPECT_OK(switch_->VerifyChassisConfig(config));
 }
 
-TEST_F(TdiSwitchTest, ShutdownSucceeds) {
+TEST_F(DpdkSwitchTest, ShutdownSucceeds) {
   EXPECT_CALL(*node_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*chassis_manager_mock_, Shutdown())
       .WillOnce(Return(::util::OkStatus()));
-  EXPECT_CALL(*phal_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
-
   EXPECT_OK(switch_->Shutdown());
 }
 
-TEST_F(TdiSwitchTest, ShutdownFailsWhenSomeManagerShutdownFails) {
+TEST_F(DpdkSwitchTest, ShutdownFailsWhenSomeManagerShutdownFails) {
   EXPECT_CALL(*node_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*chassis_manager_mock_, Shutdown())
       .WillOnce(Return(DefaultError()));
-  EXPECT_CALL(*phal_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
-
   EXPECT_THAT(switch_->Shutdown(), DerivedFromStatus(DefaultError()));
 }
 
-#if 0
-//
-// Chassis config pushed successfully.
-// P4-based forwarding pipeline config pushed successfully to node with ID 13579.
-// Return Error: tdi_sde_interface_->GetPcieCpuPort(device_id) at stratum/hal/lib/tdi/tdi_switch.cc:91
-//
-// stratum/hal/lib/tdi/tdi_switch_test.cc:166: Failure
-// Value of: switch_->PushForwardingPipelineConfig(kNodeId, config)
-// Expected: is OK
-//  Actual: generic::unknown:  (of type util::Status)
-//
 // PushForwardingPipelineConfig() should propagate the config.
-TEST_F(TdiSwitchTest, PushForwardingPipelineConfigSucceeds) {
+TEST_F(DpdkSwitchTest, PushForwardingPipelineConfigSucceeds) {
   PushChassisConfigSuccessfully();
 
   ::p4::v1::ForwardingPipelineConfig config;
@@ -179,11 +159,10 @@ TEST_F(TdiSwitchTest, PushForwardingPipelineConfigSucceeds) {
       .WillOnce(Return(::util::OkStatus()));
   EXPECT_OK(switch_->PushForwardingPipelineConfig(kNodeId, config));
 }
-#endif
 
-// When TdiSwitchTest fails to push a forwarding config during
+// When DpdkSwitchTest fails to push a forwarding config during
 // PushForwardingPipelineConfig(), it should fail immediately.
-TEST_F(TdiSwitchTest, PushForwardingPipelineConfigFailsWhenPushFails) {
+TEST_F(DpdkSwitchTest, PushForwardingPipelineConfigFailsWhenPushFails) {
   PushChassisConfigSuccessfully();
 
   ::p4::v1::ForwardingPipelineConfig config;
@@ -194,7 +173,7 @@ TEST_F(TdiSwitchTest, PushForwardingPipelineConfigFailsWhenPushFails) {
               DerivedFromStatus(DefaultError()));
 }
 
-TEST_F(TdiSwitchTest, VerifyForwardingPipelineConfigSucceeds) {
+TEST_F(DpdkSwitchTest, VerifyForwardingPipelineConfigSucceeds) {
   PushChassisConfigSuccessfully();
 
   ::p4::v1::ForwardingPipelineConfig config;
@@ -206,7 +185,7 @@ TEST_F(TdiSwitchTest, VerifyForwardingPipelineConfigSucceeds) {
 }
 
 // Test registration of a writer for sending gNMI events.
-TEST_F(TdiSwitchTest, RegisterEventNotifyWriterTest) {
+TEST_F(DpdkSwitchTest, RegisterEventNotifyWriterTest) {
   auto writer = std::shared_ptr<WriterInterface<GnmiEventPtr>>(
       new WriterMock<GnmiEventPtr>());
 
@@ -214,9 +193,9 @@ TEST_F(TdiSwitchTest, RegisterEventNotifyWriterTest) {
       .WillOnce(Return(::util::OkStatus()))
       .WillOnce(Return(DefaultError()));
 
-  // Successful TdiChassisManager registration.
+  // Successful DpdkChassisManager registration.
   EXPECT_OK(switch_->RegisterEventNotifyWriter(writer));
-  // Failed TdiChassisManager registration.
+  // Failed DpdkChassisManager registration.
   EXPECT_THAT(switch_->RegisterEventNotifyWriter(writer),
               DerivedFromStatus(DefaultError()));
 }
@@ -238,7 +217,7 @@ void ExpectMockWriteDataResponse(WriterMock<DataResponse>* writer,
 
 #if 0
 // No GetPortState()
-TEST_F(TdiSwitchTest, GetPortOperStatus) {
+TEST_F(DpdkSwitchTest, GetPortOperStatus) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -273,8 +252,8 @@ TEST_F(TdiSwitchTest, GetPortOperStatus) {
 #endif
 
 #if 0
-// No GetPortAdminState()
-TEST_F(TdiSwitchTest, GetPortAdminStatus) {
+// No GetPortAdminState
+TEST_F(DpdkSwitchTest, GetPortAdminStatus) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -310,7 +289,7 @@ TEST_F(TdiSwitchTest, GetPortAdminStatus) {
 
 #if 0
 // mac_address() not returned
-TEST_F(TdiSwitchTest, GetMacAddressPass) {
+TEST_F(DpdkSwitchTest, GetMacAddressPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -331,7 +310,7 @@ TEST_F(TdiSwitchTest, GetMacAddressPass) {
 
 #if 0
 // No BcmPort
-TEST_F(TdiSwitchTest, GetPortSpeed) {
+TEST_F(DpdkSwitchTest, GetPortSpeed) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -368,7 +347,7 @@ TEST_F(TdiSwitchTest, GetPortSpeed) {
 }
 #endif
 
-TEST_F(TdiSwitchTest, GetMemoryErrorAlarmStatePass) {
+TEST_F(DpdkSwitchTest, GetMemoryErrorAlarmStatePass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
 #if 0
@@ -394,7 +373,7 @@ TEST_F(TdiSwitchTest, GetMemoryErrorAlarmStatePass) {
 
 #if 0
 
-TEST_F(TdiSwitchTest, GetFlowProgrammingExceptionAlarmStatePass) {
+TEST_F(DpdkSwitchTest, GetFlowProgrammingExceptionAlarmStatePass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -411,7 +390,7 @@ TEST_F(TdiSwitchTest, GetFlowProgrammingExceptionAlarmStatePass) {
 }
 
 // Doesn't work
-TEST_F(TdiSwitchTest, GetHealthIndicatorPass) {
+TEST_F(DpdkSwitchTest, GetHealthIndicatorPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -430,7 +409,7 @@ TEST_F(TdiSwitchTest, GetHealthIndicatorPass) {
 }
 
 // Doesn't work
-TEST_F(TdiSwitchTest, GetForwardingViablePass) {
+TEST_F(DpdkSwitchTest, GetForwardingViablePass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -448,7 +427,7 @@ TEST_F(TdiSwitchTest, GetForwardingViablePass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 =
-TEST_F(TdiSwitchTest, GetQosQueueCountersPass) {
+TEST_F(DpdkSwitchTest, GetQosQueueCountersPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -467,7 +446,7 @@ TEST_F(TdiSwitchTest, GetQosQueueCountersPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, GetNodePacketIoDebugInfoPass) {
+TEST_F(DpdkSwitchTest, GetNodePacketIoDebugInfoPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -486,7 +465,7 @@ TEST_F(TdiSwitchTest, GetNodePacketIoDebugInfoPass) {
 
 #if 0
 // No GetPortLoopbackState()
-TEST_F(TdiSwitchTest, GetPortLoopbackStatus) {
+TEST_F(DpdkSwitchTest, GetPortLoopbackStatus) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -521,7 +500,7 @@ TEST_F(TdiSwitchTest, GetPortLoopbackStatus) {
 }
 #endif
 
-TEST_F(TdiSwitchTest, GetSdnPortId) {
+TEST_F(DpdkSwitchTest, GetSdnPortId) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -542,7 +521,7 @@ TEST_F(TdiSwitchTest, GetSdnPortId) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortAdminStatusPass) {
+TEST_F(DpdkSwitchTest, SetPortAdminStatusPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -558,7 +537,7 @@ TEST_F(TdiSwitchTest, SetPortAdminStatusPass) {
 
 #if 0
 // No SetPortLoopbackState()
-TEST_F(TdiSwitchTest, SetPortLoopbackStatusPass) {
+TEST_F(DpdkSwitchTest, SetPortLoopbackStatusPass) {
   EXPECT_CALL(*chassis_manager_mock_,
               SetPortLoopbackState(1, 2, LOOPBACK_STATE_MAC))
       .WillOnce(Return(::util::OkStatus()));
@@ -578,7 +557,7 @@ TEST_F(TdiSwitchTest, SetPortLoopbackStatusPass) {
 }
 #endif
 
-TEST_F(TdiSwitchTest, SetPortMacAddressPass) {
+TEST_F(DpdkSwitchTest, SetPortMacAddressPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -592,7 +571,7 @@ TEST_F(TdiSwitchTest, SetPortMacAddressPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortSpeedPass) {
+TEST_F(DpdkSwitchTest, SetPortSpeedPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -606,7 +585,7 @@ TEST_F(TdiSwitchTest, SetPortSpeedPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortLacpSystemIdMacPass) {
+TEST_F(DpdkSwitchTest, SetPortLacpSystemIdMacPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -620,7 +599,7 @@ TEST_F(TdiSwitchTest, SetPortLacpSystemIdMacPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortLacpSystemPriorityPass) {
+TEST_F(DpdkSwitchTest, SetPortLacpSystemPriorityPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -634,7 +613,7 @@ TEST_F(TdiSwitchTest, SetPortLacpSystemPriorityPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortHealthIndicatorPass) {
+TEST_F(DpdkSwitchTest, SetPortHealthIndicatorPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -648,7 +627,7 @@ TEST_F(TdiSwitchTest, SetPortHealthIndicatorPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortNoContentsPass) {
+TEST_F(DpdkSwitchTest, SetPortNoContentsPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -660,7 +639,7 @@ TEST_F(TdiSwitchTest, SetPortNoContentsPass) {
   EXPECT_THAT(details.at(0).ToString(), HasSubstr("Not supported yet"));
 }
 
-TEST_F(TdiSwitchTest, SetNoContentsPass) {
+TEST_F(DpdkSwitchTest, SetNoContentsPass) {
   SetRequest req;
   req.add_requests();
   std::vector<::util::Status> details;

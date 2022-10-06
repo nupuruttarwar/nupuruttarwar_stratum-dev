@@ -20,7 +20,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 class TdiCounterManager {
  public:
@@ -60,7 +60,7 @@ class TdiCounterManager {
   const int device_;
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

@@ -269,7 +269,7 @@ bool ContainsUniqueNames(const T& values) {
                             status.error_message());
     }
 
-#ifndef P4OVS_CHANGES
+#ifndef DPDK_TARGET
     // Save running_chassis_config_ after everything went OK.
     running_chassis_config_.reset(config.PassOwnership());
 

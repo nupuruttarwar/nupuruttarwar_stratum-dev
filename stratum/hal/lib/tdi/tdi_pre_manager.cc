@@ -16,7 +16,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 TdiPreManager::TdiPreManager(TdiSdeInterface* tdi_sde_interface, int device)
     : tdi_sde_interface_(ABSL_DIE_IF_NULL(tdi_sde_interface)), device_(device) {}
@@ -321,6 +321,6 @@ std::unique_ptr<TdiPreManager> TdiPreManager::CreateInstance(
   return ::util::OkStatus();
 }
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

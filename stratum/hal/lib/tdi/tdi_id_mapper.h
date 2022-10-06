@@ -22,7 +22,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 // A helper class that convert IDs between P4Runtime and TDI.
 class TdiIdMapper {
@@ -30,7 +30,7 @@ class TdiIdMapper {
   // Initialize pipeline information
   // This function creates a mapping between P4Info and TDI
   ::util::Status PushForwardingPipelineConfig(const TdiDeviceConfig& config,
-                                              const tdi::TdiInfo* tdi_info)
+                                              const ::tdi::TdiInfo* tdi_info)
       LOCKS_EXCLUDED(lock_);
 
   // Maps a P4Info ID to a TDI ID
@@ -58,7 +58,7 @@ class TdiIdMapper {
   TdiIdMapper();
 
   ::util::Status BuildMapping(uint32 p4info_id, std::string p4info_name,
-                              const tdi::TdiInfo* tdi_info)
+                              const ::tdi::TdiInfo* tdi_info)
       SHARED_LOCKS_REQUIRED(lock_);
 
   // Scan context.json file and build mappings for ActionProfile and
@@ -66,7 +66,7 @@ class TdiIdMapper {
   // FIXME(Yi): We may want to remove this workaround if we use the P4 externs
   // in the future.
   ::util::Status BuildActionProfileMapping(
-      const p4::config::v1::P4Info& p4info, const tdi::TdiInfo* tdi_info,
+      const p4::config::v1::P4Info& p4info, const ::tdi::TdiInfo* tdi_info,
       const std::string& context_json_content) SHARED_LOCKS_REQUIRED(lock_);
 
   // Reader-writer lock used to protect access to mapping.
@@ -85,7 +85,7 @@ class TdiIdMapper {
       GUARDED_BY(lock_);
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

@@ -19,7 +19,7 @@ DEFINE_bool(incompatible_enable_tdi_legacy_bytestring_responses, true,
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 class SessionMock : public TdiSdeInterface::SessionInterface {
  public:
@@ -350,7 +350,7 @@ class TdiSdeMock : public TdiSdeInterface {
                      ::util::StatusOr<uint32>(uint32 action_selector_id));
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

@@ -22,7 +22,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 class TdiActionProfileManager {
  public:
@@ -125,7 +125,7 @@ class TdiActionProfileManager {
   const int device_;
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

@@ -2,29 +2,42 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
-#define STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
+#ifndef STRATUM_HAL_LIB_TDI_DPDK_DPDK_SWITCH_H_
+#define STRATUM_HAL_LIB_TDI_DPDK_DPDK_SWITCH_H_
 
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "absl/synchronization/mutex.h"
-#include "stratum/hal/lib/tdi/tdi_sde_interface.h"
-#include "stratum/hal/lib/tdi/tdi_node.h"
-#include "stratum/hal/lib/common/phal_interface.h"
 #include "stratum/hal/lib/common/switch_interface.h"
+#include "stratum/hal/lib/tdi/dpdk/dpdk_chassis_manager.h"
 
 namespace stratum {
 namespace hal {
 namespace tdi {
 
-class TdiChassisManager;
+class TdiSdeInterface;
+class TdiNode;
 
-class TdiSwitch : public SwitchInterface {
+class PortParamInterface {
+public:
+    virtual ~PortParamInterface() {}
+
+    virtual bool IsPortParamAlreadySet(
+        uint64 node_id, uint32 port_id,
+        SetRequest::Request::Port::ValueCase value_case) = 0;
+
+    virtual ::util::Status SetPortParam(
+        uint64 node_id, uint32 port_id,
+        const SingletonPort& singleton_port,
+        SetRequest::Request::Port::ValueCase value_case) = 0;
+};
+
+class DpdkSwitch : virtual public SwitchInterface,
+                   virtual public PortParamInterface {
  public:
-  ~TdiSwitch() override;
+  ~DpdkSwitch() override;
 
   // SwitchInterface public methods.
   ::util::Status PushChassisConfig(const ChassisConfig& config) override
@@ -76,25 +89,37 @@ class TdiSwitch : public SwitchInterface {
       LOCKS_EXCLUDED(chassis_lock);
   ::util::StatusOr<std::vector<std::string>> VerifyState() override;
 
+  // Determines whether the specified port configuration parameter has
+  // already been set. Once set, it may not be set again.
+  bool IsPortParamAlreadySet(
+      uint64 node_id, uint32 port_id,
+      SetRequest::Request::Port::ValueCase value_case) override;
+
+  // Sets the value of a port configuration parameter.
+  // Once set, it may not be set again.
+  ::util::Status SetPortParam(
+      uint64 node_id, uint32 port_id,
+      const SingletonPort& singleton_port,
+      SetRequest::Request::Port::ValueCase value_case) override;
+
   // Factory function for creating the instance of the class.
-  static std::unique_ptr<TdiSwitch> CreateInstance(
-      PhalInterface* phal_interface, TdiChassisManager* tdi_chassis_manager,
-      TdiSdeInterface* tdi_sde_interface,
+  static std::unique_ptr<DpdkSwitch> CreateInstance(
+      DpdkChassisManager* chassis_manager,
+      TdiSdeInterface* sde_interface,
       const std::map<int, TdiNode*>& device_id_to_tdi_node);
 
-  // TdiSwitch is neither copyable nor movable.
-  TdiSwitch(const TdiSwitch&) = delete;
-  TdiSwitch& operator=(const TdiSwitch&) = delete;
-  TdiSwitch(TdiSwitch&&) = delete;
-  TdiSwitch& operator=(TdiSwitch&&) = delete;
+  // DpdkSwitch is neither copyable nor movable.
+  DpdkSwitch(const DpdkSwitch&) = delete;
+  DpdkSwitch& operator=(const DpdkSwitch&) = delete;
+  DpdkSwitch(DpdkSwitch&&) = delete;
+  DpdkSwitch& operator=(DpdkSwitch&&) = delete;
 
  private:
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  TdiSwitch(PhalInterface* phal_interface,
-            TdiChassisManager* tdi_chassis_manager,
-            TdiSdeInterface* tdi_sde_interface,
-            const std::map<int, TdiNode*>& device_id_to_tdi_node);
+  DpdkSwitch(DpdkChassisManager* chassis_manager,
+             TdiSdeInterface* sde_interface,
+             const std::map<int, TdiNode*>& device_id_to_tdi_node);
 
   // Helper to get TdiNode pointer from device_id number or return error
   // indicating invalid device_id.
@@ -104,29 +129,24 @@ class TdiSwitch : public SwitchInterface {
   // invalid/unknown/uninitialized node.
   ::util::StatusOr<TdiNode*> GetTdiNodeFromNodeId(uint64 node_id) const;
 
-  // Pointer to a PhalInterface implementation. The pointer has been also
-  // passed to a few managers for accessing HW. Note that there is only one
-  // instance of this class per chassis.
-  PhalInterface* phal_interface_;  // not owned by this class.
-
-  // Pointer to a TdiSdeInterface implementation that wraps PD API calls.
-  TdiSdeInterface* tdi_sde_interface_;  // not owned by this class.
+  // Pointer to a TdiSdeInterface implementation that wraps TDI API calls.
+  TdiSdeInterface* sde_interface_;  // not owned by this class.
 
   // Per chassis Managers. Note that there is only one instance of this class
   // per chassis.
-  TdiChassisManager* tdi_chassis_manager_;  // not owned by the class.
+  DpdkChassisManager* chassis_manager_;  // not owned by the class.
 
   // Map from zero-based device_id number corresponding to a node/ASIC to a
-  // pointer to TdiNode which contain all the per-node managers for that
+  // pointer to TdiNode which contains all the per-node managers for that
   // node/ASIC. This map is initialized in the constructor and will not change
   // during the lifetime of the class.
   // TODO(max): Does this need to be protected by chassis_lock?
   const std::map<int, TdiNode*> device_id_to_tdi_node_;  // pointers not owned
 
   // Map from the node ids to to a pointer to TdiNode which contain all the
-  // per-node managers for that node/ASIC. Created everytime a config is pushed.
-  // At any point of time this map will contain a keys the ids of the nodes
-  // which had a successful config push.
+  // per-node managers for that node/ASIC. Created whenever a config is pushed.
+  // At any point in time, this map will contain as keys the ids of the nodes
+  // that had a successful config push.
   // TODO(max): Does this need to be protected by chassis_lock?
   std::map<uint64, TdiNode*> node_id_to_tdi_node_;  //  pointers not owned
 };
@@ -135,4 +155,4 @@ class TdiSwitch : public SwitchInterface {
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
+#endif  // STRATUM_HAL_LIB_TDI_DPDK_DPDK_SWITCH_H_

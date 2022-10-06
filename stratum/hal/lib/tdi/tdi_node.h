@@ -13,18 +13,18 @@
 #include "p4/v1/p4runtime.pb.h"
 #include "stratum/glue/integral_types.h"
 #include "stratum/glue/status/status.h"
+#include "stratum/hal/lib/common/common.pb.h"
+#include "stratum/hal/lib/common/writer_interface.h"
 #include "stratum/hal/lib/tdi/tdi.pb.h"
 #include "stratum/hal/lib/tdi/tdi_action_profile_manager.h"
 #include "stratum/hal/lib/tdi/tdi_counter_manager.h"
 #include "stratum/hal/lib/tdi/tdi_packetio_manager.h"
 #include "stratum/hal/lib/tdi/tdi_pre_manager.h"
 #include "stratum/hal/lib/tdi/tdi_table_manager.h"
-#include "stratum/hal/lib/common/common.pb.h"
-#include "stratum/hal/lib/common/writer_interface.h"
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 // The TdiNode class encapsulates all per P4-native node/chip/ASIC
 // functionalities, primarily the flow managers. Calls made to this class are
@@ -70,7 +70,9 @@ class TdiNode {
       TdiPacketioManager* tdi_packetio_manager,
       TdiPreManager* tdi_pre_manager,
       TdiCounterManager* tdi_counter_manager,
-      TdiSdeInterface* tdi_sde_interface, int device_id);
+      TdiSdeInterface* tdi_sde_interface, int device_id,
+      // Note: bfrt_node defaults are (true, 1)
+      bool initialized = false, uint64 node_id = 0);
 
   // TdiNode is neither copyable nor movable.
   TdiNode(const TdiNode&) = delete;
@@ -90,7 +92,8 @@ class TdiNode {
           TdiPacketioManager* tdi_packetio_manager,
           TdiPreManager* tdi_pre_manager,
           TdiCounterManager* tdi_counter_manager,
-          TdiSdeInterface* tdi_sde_interface, int device_id);
+          TdiSdeInterface* tdi_sde_interface, int device_id,
+          bool initialized, uint64 node_id);
 
   // Write extern entries like ActionProfile, DirectCounter, PortMetadata
   ::util::Status WriteExternEntry(
@@ -143,7 +146,7 @@ class TdiNode {
   const int device_id_;
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

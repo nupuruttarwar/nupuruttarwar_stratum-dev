@@ -14,7 +14,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 bool IsDontCareMatch(const ::p4::v1::FieldMatch::Exact& exact) { return false; }
 
@@ -77,6 +77,6 @@ int NumBitsToNumBytes(int num_bits) {
   return (num_bits + 7) / 8;  // ceil(num_bits/8)
 }
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

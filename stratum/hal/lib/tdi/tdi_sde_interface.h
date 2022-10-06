@@ -20,7 +20,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 // The "TdiSdeInterface" class in HAL implements a shim layer around the TDI
 // SDE. It is defined as an abstract class to allow multiple implementations:
@@ -547,7 +547,7 @@ class TdiSdeInterface {
   TdiSdeInterface() {}
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

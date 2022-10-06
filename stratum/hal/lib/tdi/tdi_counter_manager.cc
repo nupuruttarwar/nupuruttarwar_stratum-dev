@@ -15,7 +15,7 @@ DECLARE_uint32(tdi_table_sync_timeout_ms);
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 std::unique_ptr<TdiCounterManager> TdiCounterManager::CreateInstance(
     TdiSdeInterface* tdi_sde_interface, int device) {
@@ -120,6 +120,6 @@ TdiCounterManager::TdiCounterManager(TdiSdeInterface* tdi_sde_interface,
   return ::util::OkStatus();
 }
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

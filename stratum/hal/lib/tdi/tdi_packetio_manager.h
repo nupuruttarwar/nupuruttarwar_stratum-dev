@@ -24,7 +24,7 @@
 
 namespace stratum {
 namespace hal {
-namespace barefoot {
+namespace tdi {
 
 class TdiPacketioManager {
  public:
@@ -142,7 +142,7 @@ class TdiPacketioManager {
   friend class TdiPacketioManagerTest;
 };
 
-}  // namespace barefoot
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 
