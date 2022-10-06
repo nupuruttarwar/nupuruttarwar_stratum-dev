@@ -40,7 +40,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 using PortStatusEvent = TdiSdeInterface::PortStatusEvent;
 using test_utils::EqualsProto;
@@ -461,6 +461,6 @@ TEST_F(DpdkChassisManagerTest, VerifyChassisConfigSuccess) {
   ASSERT_OK(VerifyChassisConfig(config1));
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

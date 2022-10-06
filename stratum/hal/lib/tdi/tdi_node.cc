@@ -23,7 +23,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 TdiNode::TdiNode(TdiTableManager* tdi_table_manager,
                  TdiActionProfileManager* tdi_action_profile_manager,
@@ -450,6 +450,6 @@ std::unique_ptr<TdiNode> TdiNode::CreateInstance(
   }
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

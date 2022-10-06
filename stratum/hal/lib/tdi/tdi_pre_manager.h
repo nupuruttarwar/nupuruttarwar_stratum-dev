@@ -22,7 +22,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 using PreEntry = ::p4::v1::PacketReplicationEngineEntry;
 
@@ -98,7 +98,7 @@ class TdiPreManager {
   const int device_;
 };
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

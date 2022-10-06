@@ -19,7 +19,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 namespace {
 // Helper function to convert a uint32 to a little-endian byte string.
@@ -69,6 +69,6 @@ std::string Uint32ToLeByteStream(uint32 val) {
   return util::OkStatus();
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

@@ -13,7 +13,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 // Parses the P4 ForwardingPipelineConfig to extract the Barefoot pipeline.
 // This method specifically extracts the pipeline from the p4_device_config
@@ -29,7 +29,7 @@ namespace tdix {
 ::util::Status BfPipelineConfigToPiConfig(const BfPipelineConfig& bf_config,
                                           std::string* pi_node_config);
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

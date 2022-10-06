@@ -4,6 +4,6 @@
 #include "stratum/hal/bin/tdi/dpdk/dpdk_main.h"
 
 int main(int argc, char* argv[]) {
-  return stratum::hal::tdix::DpdkMain(argc, argv).error_code();
+  return stratum::hal::tdi::DpdkMain(argc, argv).error_code();
 }
 

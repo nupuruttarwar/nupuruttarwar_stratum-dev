@@ -24,7 +24,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 // The TdiNode class encapsulates all per P4-native node/chip/ASIC
 // functionalities, primarily the flow managers. Calls made to this class are
@@ -146,7 +146,7 @@ class TdiNode {
   const int device_id_;
 };
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

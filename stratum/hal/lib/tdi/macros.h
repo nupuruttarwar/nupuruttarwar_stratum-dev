@@ -15,7 +15,7 @@ extern "C" {
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 class BooleanBfStatus {
  public:
@@ -99,7 +99,7 @@ class BooleanBfStatus {
         << "'" << #expr << "' failed with error message: "                  \
         << FixMessage(bf_err_str(__ret.status()))
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

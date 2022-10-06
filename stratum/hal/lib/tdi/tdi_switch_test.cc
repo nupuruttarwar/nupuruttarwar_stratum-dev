@@ -27,7 +27,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 using ::testing::_;
 using ::testing::DoAll;
@@ -673,6 +673,6 @@ TEST_F(TdiSwitchTest, SetNoContentsPass) {
 // TODO(unknown): Complete unit test coverage.
 
 }  // namespace
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

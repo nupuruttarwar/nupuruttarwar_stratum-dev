@@ -23,7 +23,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 // Lock which protects chassis state across the entire switch.
 extern absl::Mutex chassis_lock;
@@ -295,7 +295,7 @@ class TdiChassisManager {
   friend class TdiChassisManagerTest;
 };
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

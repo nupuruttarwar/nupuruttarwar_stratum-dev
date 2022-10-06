@@ -22,7 +22,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 // A helper class that convert IDs between P4Runtime and TDI.
 class TdiIdMapper {
@@ -85,7 +85,7 @@ class TdiIdMapper {
       GUARDED_BY(lock_);
 };
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

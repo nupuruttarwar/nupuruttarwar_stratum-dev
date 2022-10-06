@@ -30,7 +30,7 @@ DEFINE_string(tdi_switchd_cfg, "/usr/share/stratum/tofino_skip_p4.conf",
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 ::util::Status TdiMain(int argc, char* argv[]) {
   InitGoogle(argv[0], &argc, &argv, true);
@@ -109,6 +109,6 @@ namespace tdix {
   return ::util::OkStatus();
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

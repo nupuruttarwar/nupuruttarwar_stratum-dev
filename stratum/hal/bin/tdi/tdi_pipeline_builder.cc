@@ -26,7 +26,7 @@ DEFINE_string(unpack_dir, "",
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 namespace {
 
 constexpr char kUsage[] =
@@ -140,10 +140,10 @@ p4_device_config field of the P4Runtime SetForwardingPipelineConfig message.
 }
 
 }  // namespace
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 
 int main(int argc, char** argv) {
-  return stratum::hal::tdix::Main(argc, argv).error_code();
+  return stratum::hal::tdi::Main(argc, argv).error_code();
 }

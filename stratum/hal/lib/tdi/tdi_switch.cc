@@ -22,7 +22,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 TdiSwitch::TdiSwitch(PhalInterface* phal_interface,
                      TdiChassisManager* tdi_chassis_manager,
@@ -298,6 +298,6 @@ std::unique_ptr<TdiSwitch> TdiSwitch::CreateInstance(
   return tdi_node;
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

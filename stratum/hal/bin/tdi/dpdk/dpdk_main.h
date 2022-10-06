@@ -8,11 +8,11 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 ::util::Status DpdkMain(int argc, char* argv[]);
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

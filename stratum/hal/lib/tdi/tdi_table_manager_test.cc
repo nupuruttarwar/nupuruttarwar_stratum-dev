@@ -24,7 +24,7 @@ DEFINE_string(tdi_sde_config_dir, "/var/run/stratum/tdi_config",
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 using test_utils::EqualsProto;
 using ::testing::_;
@@ -366,6 +366,6 @@ TEST_F(TdiTableManagerTest, RejectMeterEntryReadWithoutId) {
   EXPECT_EQ(ERR_INVALID_PARAM, ret.error_code());
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

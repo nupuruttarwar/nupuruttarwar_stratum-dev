@@ -87,7 +87,7 @@ DEFINE_bool(incompatible_enable_tdi_legacy_bytestring_responses, true,
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 constexpr absl::Duration TdiSdeWrapper::kWriteTimeout;
 constexpr int32 TdiSdeWrapper::kBfDefaultMtu;
@@ -3782,6 +3782,6 @@ TdiSdeWrapper* TdiSdeWrapper::GetSingleton() {
   return singleton_;
 }
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum

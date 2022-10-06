@@ -6,7 +6,7 @@ syntax = "proto3";
 
 option cc_generic_services = false;
 
-package stratum.hal.tdix;
+package stratum.hal.tdi;
 
 import "p4/config/v1/p4info.proto";
 

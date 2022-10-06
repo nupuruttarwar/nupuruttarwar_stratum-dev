@@ -10,7 +10,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 // TNA Extern types
 constexpr uint32 kTnaExternActionProfileId = 129;
@@ -54,7 +54,7 @@ constexpr uint64 kMaxPriority = (1u << 24) - 1;
 
 constexpr absl::Duration kDefaultSyncTimeout = absl::Seconds(1);
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 

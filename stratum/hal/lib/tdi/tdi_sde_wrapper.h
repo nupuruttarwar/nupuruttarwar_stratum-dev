@@ -27,7 +27,7 @@
 
 namespace stratum {
 namespace hal {
-namespace tdix {
+namespace tdi {
 
 class TableKey : public TdiSdeInterface::TableKeyInterface {
  public:
@@ -497,7 +497,7 @@ class TdiSdeWrapper : public TdiSdeInterface {
 
 };
 
-}  // namespace tdix
+}  // namespace tdi
 }  // namespace hal
 }  // namespace stratum
 
