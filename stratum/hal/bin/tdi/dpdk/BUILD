@@ -12,10 +12,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-target_defines = [
-    "DPDK_TARGET",
-]
-
 stratum_dpdk_common_deps = [
     "//stratum/glue:init_google",
     "//stratum/glue:logging",
@@ -34,7 +30,7 @@ stratum_cc_binary(
         "main.cc",
     ],
     arches = HOST_ARCHES,
-    defines = target_defines,
+    defines = ["DPDK_TARGET"],
     data = [
 	# NOTE: Replace with dpdk conf files
         "//stratum/hal/bin/barefoot:tofino_skip_p4.conf",
@@ -51,95 +47,4 @@ stratum_cc_binary(
         "//stratum/hal/lib/tdi:tdi_sde_wrapper",
         "//stratum/hal/lib/tdi:tdi_table_manager",
     ] + stratum_dpdk_common_deps,
-)
-
-##### The following targets are incomplete and untested #####
-##### They're also Tofino-specific (cough, cough) #####
-
-# Rules for Debian package
-pkg_tar(
-    name = "stratum_dpdk_binaries",
-    srcs = [
-        "deb/attach-bf-shell.sh",
-        "deb/start-stratum.sh",
-        "://stratum/hal/lib/tdi:tdi_pipeline_builder",
-        ":stratum_dpdk",
-    ],
-    mode = "0755",
-    package_dir = "/usr/bin",
-)
-
-pkg_tar(
-    name = "systemd_service",
-    srcs = [
-        "deb/stratum_dpdk.service",
-    ],
-    mode = "0644",
-    package_dir = "/usr/lib/systemd/system",
-)
-
-pkg_tar(
-    name = "stratum_shareable_files",
-    srcs = [
-	# NOTE: Replace with dpdk conf files
-        "//stratum/hal/bin/barefoot:tofino_skip_p4.conf",
-        "//stratum/hal/bin/barefoot:tofino_skip_p4_no_bsp.conf",
-    ],
-    mode = "0644",
-    package_dir = "/usr/share/stratum",
-)
-
-pkg_tar(
-    name = "stratum_configs",
-    srcs = [
-        "deb/stratum.flags",
-        "deb/stratum_dpdk.env",
-        "//stratum/hal/lib/common:gnmi_caps.pb.txt",
-    ],
-    mode = "0644",
-    package_dir = "/etc/stratum",
-    deps = [
-        "//stratum/hal/config:platform_configs_tar",
-    ],
-)
-
-pkg_tar(
-    name = "stratum_common_data",
-    deps = [
-        ":stratum_configs",
-        ":stratum_shareable_files",
-        ":systemd_service",
-        "@local_tofino_bin//:tofino_library_files",
-        "@local_tofino_bin//:tofino_shareable_files",
-        "@local_tofino_bin//:tofino_kernel_module",
-    ],
-)
-
-pkg_tar(
-    name = "stratum_tofino_data",
-    extension = "tar.bz2",
-    deps = [
-        ":stratum_dpdk_binaries",
-        ":stratum_common_data",
-    ],
-)
-
-pkg_deb(
-    name = "stratum_tofino_deb",
-    architecture = "amd64",
-    data = ":stratum_tofino_data",
-    depends = [
-        "kmod",
-        "libedit2",
-        "libssl1.1",
-        "systemd",
-        "telnet",
-    ],
-    description = "The Stratum package for an Intel Tofino-based platform",
-    homepage = "https://stratumproject.org/",
-    maintainer = "The Stratum Project",
-    package = "stratum-tdi",
-    postinst = "deb/postinst",
-    prerm = "deb/prerm",
-    version = "0.0.1",
 )
