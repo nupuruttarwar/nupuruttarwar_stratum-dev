@@ -2,8 +2,8 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
-#define STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
+#ifndef STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_SWITCH_H_
+#define STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_SWITCH_H_
 
 #include <map>
 #include <memory>
@@ -20,11 +20,11 @@ namespace stratum {
 namespace hal {
 namespace tdi {
 
-class TdiChassisManager;
+class TofinoChassisManager;
 
-class TdiSwitch : public SwitchInterface {
+class TofinoSwitch : public SwitchInterface {
  public:
-  ~TdiSwitch() override;
+  ~TofinoSwitch() override;
 
   // SwitchInterface public methods.
   ::util::Status PushChassisConfig(const ChassisConfig& config) override
@@ -77,24 +77,24 @@ class TdiSwitch : public SwitchInterface {
   ::util::StatusOr<std::vector<std::string>> VerifyState() override;
 
   // Factory function for creating the instance of the class.
-  static std::unique_ptr<TdiSwitch> CreateInstance(
-      PhalInterface* phal_interface, TdiChassisManager* tdi_chassis_manager,
-      TdiSdeInterface* tdi_sde_interface,
+  static std::unique_ptr<TofinoSwitch> CreateInstance(
+      PhalInterface* phal_interface, TofinoChassisManager* chassis_manager,
+      TdiSdeInterface* sde_interface,
       const std::map<int, TdiNode*>& device_id_to_tdi_node);
 
-  // TdiSwitch is neither copyable nor movable.
-  TdiSwitch(const TdiSwitch&) = delete;
-  TdiSwitch& operator=(const TdiSwitch&) = delete;
-  TdiSwitch(TdiSwitch&&) = delete;
-  TdiSwitch& operator=(TdiSwitch&&) = delete;
+  // TofinoSwitch is neither copyable nor movable.
+  TofinoSwitch(const TofinoSwitch&) = delete;
+  TofinoSwitch& operator=(const TofinoSwitch&) = delete;
+  TofinoSwitch(TofinoSwitch&&) = delete;
+  TofinoSwitch& operator=(TofinoSwitch&&) = delete;
 
  private:
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  TdiSwitch(PhalInterface* phal_interface,
-            TdiChassisManager* tdi_chassis_manager,
-            TdiSdeInterface* tdi_sde_interface,
-            const std::map<int, TdiNode*>& device_id_to_tdi_node);
+  TofinoSwitch(PhalInterface* phal_interface,
+	       TofinoChassisManager* chassis_manager,
+	       TdiSdeInterface* sde_interface,
+	       const std::map<int, TdiNode*>& device_id_to_tdi_node);
 
   // Helper to get TdiNode pointer from device_id number or return error
   // indicating invalid device_id.
@@ -110,11 +110,11 @@ class TdiSwitch : public SwitchInterface {
   PhalInterface* phal_interface_;  // not owned by this class.
 
   // Pointer to a TdiSdeInterface implementation that wraps PD API calls.
-  TdiSdeInterface* tdi_sde_interface_;  // not owned by this class.
+  TdiSdeInterface* sde_interface_;  // not owned by this class.
 
-  // Per chassis Managers. Note that there is only one instance of this class
-  // per chassis.
-  TdiChassisManager* tdi_chassis_manager_;  // not owned by the class.
+  // Pointer to ChassisManager object. Note that there is only one instance
+  // of this class.
+  TofinoChassisManager* chassis_manager_;  // not owned by the class.
 
   // Map from zero-based device_id number corresponding to a node/ASIC to a
   // pointer to TdiNode which contain all the per-node managers for that
@@ -135,4 +135,4 @@ class TdiSwitch : public SwitchInterface {
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_TDI_TDI_SWITCH_H_
+#endif  // STRATUM_HAL_LIB_TDI_TOFINO_TOFINO_SWITCH_H_

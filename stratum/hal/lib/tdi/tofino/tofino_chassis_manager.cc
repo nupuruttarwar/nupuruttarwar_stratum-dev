@@ -2,7 +2,7 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#include "stratum/hal/lib/tdi/tdi_chassis_manager.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_chassis_manager.h"
 
 #include <map>
 #include <memory>
@@ -35,13 +35,14 @@ using TransceiverEvent = PhalInterface::TransceiverEvent;
 ABSL_CONST_INIT absl::Mutex chassis_lock(absl::kConstInit);
 
 /* static */
-constexpr int TdiChassisManager::kMaxPortStatusEventDepth;
+constexpr int TofinoChassisManager::kMaxPortStatusEventDepth;
 /* static */
-constexpr int TdiChassisManager::kMaxXcvrEventDepth;
+constexpr int TofinoChassisManager::kMaxXcvrEventDepth;
 
-TdiChassisManager::TdiChassisManager(OperationMode mode,
-                                     PhalInterface* phal_interface,
-                                     TdiSdeInterface* tdi_sde_interface)
+TofinoChassisManager::TofinoChassisManager(
+    OperationMode mode,
+    PhalInterface* phal_interface,
+    TdiSdeInterface* tdi_sde_interface)
     : mode_(mode),
       initialized_(false),
       port_status_event_channel_(nullptr),
@@ -61,7 +62,7 @@ TdiChassisManager::TdiChassisManager(OperationMode mode,
       phal_interface_(ABSL_DIE_IF_NULL(phal_interface)),
       tdi_sde_interface_(ABSL_DIE_IF_NULL(tdi_sde_interface)) {}
 
-TdiChassisManager::TdiChassisManager()
+TofinoChassisManager::TofinoChassisManager()
     : mode_(OPERATION_MODE_STANDALONE),
       initialized_(false),
       port_status_event_channel_(nullptr),
@@ -81,9 +82,9 @@ TdiChassisManager::TdiChassisManager()
       phal_interface_(nullptr),
       tdi_sde_interface_(nullptr) {}
 
-TdiChassisManager::~TdiChassisManager() = default;
+TofinoChassisManager::~TofinoChassisManager() = default;
 
-::util::Status TdiChassisManager::AddPortHelper(
+::util::Status TofinoChassisManager::AddPortHelper(
     uint64 node_id, int unit, uint32 sdk_port_id,
     const SingletonPort& singleton_port /* desired config */,
     /* out */ PortConfig* config /* new config */) {
@@ -144,7 +145,7 @@ TdiChassisManager::~TdiChassisManager() = default;
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::UpdatePortHelper(
+::util::Status TofinoChassisManager::UpdatePortHelper(
     uint64 node_id, int unit, uint32 sdk_port_id,
     const SingletonPort& singleton_port /* desired config */,
     const PortConfig& config_old /* current config */,
@@ -279,7 +280,7 @@ TdiChassisManager::~TdiChassisManager() = default;
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::PushChassisConfig(
+::util::Status TofinoChassisManager::PushChassisConfig(
     const ChassisConfig& config) {
   if (!initialized_) RETURN_IF_ERROR(RegisterEventWriters());
 
@@ -381,7 +382,7 @@ TdiChassisManager::~TdiChassisManager() = default;
       // was added and the speed_bps was set.
       if (!config_old->speed_bps) {
         RETURN_ERROR(ERR_INTERNAL)
-            << "Invalid internal state in TdiChassisManager, "
+            << "Invalid internal state in TofinoChassisManager, "
             << "speed_bps field should contain a value";
       }
 
@@ -496,7 +497,7 @@ TdiChassisManager::~TdiChassisManager() = default;
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::ApplyPortShapingConfig(
+::util::Status TofinoChassisManager::ApplyPortShapingConfig(
     uint64 node_id, int unit, uint32 sdk_port_id,
     const TofinoConfig::BfPortShapingConfig::BfPerPortShapingConfig&
         shaping_config) {
@@ -529,7 +530,7 @@ TdiChassisManager::~TdiChassisManager() = default;
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::VerifyChassisConfig(
+::util::Status TofinoChassisManager::VerifyChassisConfig(
     const ChassisConfig& config) {
   CHECK_RETURN_IF_FALSE(config.trunk_ports_size() == 0)
       << "Trunk ports are not supported on Tofino.";
@@ -661,21 +662,21 @@ TdiChassisManager::~TdiChassisManager() = default;
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::RegisterEventNotifyWriter(
+::util::Status TofinoChassisManager::RegisterEventNotifyWriter(
     const std::shared_ptr<WriterInterface<GnmiEventPtr>>& writer) {
   absl::WriterMutexLock l(&gnmi_event_lock_);
   gnmi_event_writer_ = writer;
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::UnregisterEventNotifyWriter() {
+::util::Status TofinoChassisManager::UnregisterEventNotifyWriter() {
   absl::WriterMutexLock l(&gnmi_event_lock_);
   gnmi_event_writer_ = nullptr;
   return ::util::OkStatus();
 }
 
-::util::StatusOr<const TdiChassisManager::PortConfig*>
-TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
+::util::StatusOr<const TofinoChassisManager::PortConfig*>
+TofinoChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   auto* port_id_to_config =
       gtl::FindOrNull(node_id_to_port_id_to_port_config_, node_id);
   CHECK_RETURN_IF_FALSE(port_id_to_config != nullptr)
@@ -687,8 +688,8 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return config;
 }
 
-::util::StatusOr<uint32> TdiChassisManager::GetSdkPortId(uint64 node_id,
-                                                        uint32 port_id) const {
+::util::StatusOr<uint32> TofinoChassisManager::GetSdkPortId(
+    uint64 node_id, uint32 port_id) const {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
   }
@@ -706,7 +707,7 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return *sdk_port_id;
 }
 
-::util::StatusOr<DataResponse> TdiChassisManager::GetPortData(
+::util::StatusOr<DataResponse> TofinoChassisManager::GetPortData(
     const DataRequest::Request& request) {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
@@ -838,7 +839,7 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return resp;
 }
 
-::util::StatusOr<PortState> TdiChassisManager::GetPortState(
+::util::StatusOr<PortState> TofinoChassisManager::GetPortState(
     uint64 node_id, uint32 port_id) const {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
@@ -869,7 +870,7 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return port_state;
 }
 
-::util::StatusOr<absl::Time> TdiChassisManager::GetPortTimeLastChanged(
+::util::StatusOr<absl::Time> TofinoChassisManager::GetPortTimeLastChanged(
     uint64 node_id, uint32 port_id) {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
@@ -882,8 +883,8 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return node_id_to_port_id_to_time_last_changed_[node_id][port_id];
 }
 
-::util::Status TdiChassisManager::GetPortCounters(uint64 node_id, uint32 port_id,
-                                                 PortCounters* counters) {
+::util::Status TofinoChassisManager::GetPortCounters(
+    uint64 node_id, uint32 port_id, PortCounters* counters) {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
   }
@@ -892,7 +893,7 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return tdi_sde_interface_->GetPortCounters(unit, sdk_port_id, counters);
 }
 
-::util::StatusOr<std::map<uint64, int>> TdiChassisManager::GetNodeIdToUnitMap()
+::util::StatusOr<std::map<uint64, int>> TofinoChassisManager::GetNodeIdToUnitMap()
     const {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
@@ -900,7 +901,7 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return node_id_to_unit_;
 }
 
-::util::Status TdiChassisManager::ReplayPortsConfig(uint64 node_id) {
+::util::Status TofinoChassisManager::ReplayPortsConfig(uint64 node_id) {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
   }
@@ -928,12 +929,12 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
 
     if (!config.speed_bps) {
       RETURN_ERROR(ERR_INTERNAL)
-          << "Invalid internal state in TdiChassisManager, "
+          << "Invalid internal state in TofinoChassisManager, "
           << "speed_bps field should contain a value";
     }
     if (!config.fec_mode) {
       RETURN_ERROR(ERR_INTERNAL)
-          << "Invalid internal state in TdiChassisManager, "
+          << "Invalid internal state in TofinoChassisManager, "
           << "fec_mode field should contain a value";
     }
 
@@ -1014,7 +1015,7 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
   return status;
 }
 
-::util::Status TdiChassisManager::GetFrontPanelPortInfo(
+::util::Status TofinoChassisManager::GetFrontPanelPortInfo(
     uint64 node_id, uint32 port_id, FrontPanelPortInfo* fp_port_info) {
   auto* port_id_to_port_key =
       gtl::FindOrNull(node_id_to_port_id_to_singleton_port_key_, node_id);
@@ -1028,14 +1029,14 @@ TdiChassisManager::GetPortConfig(uint64 node_id, uint32 port_id) const {
                                                 fp_port_info);
 }
 
-std::unique_ptr<TdiChassisManager> TdiChassisManager::CreateInstance(
+std::unique_ptr<TofinoChassisManager> TofinoChassisManager::CreateInstance(
     OperationMode mode, PhalInterface* phal_interface,
     TdiSdeInterface* tdi_sde_interface) {
   return absl::WrapUnique(
-      new TdiChassisManager(mode, phal_interface, tdi_sde_interface));
+      new TofinoChassisManager(mode, phal_interface, tdi_sde_interface));
 }
 
-void TdiChassisManager::SendPortOperStateGnmiEvent(
+void TofinoChassisManager::SendPortOperStateGnmiEvent(
     uint64 node_id, uint32 port_id, PortState new_state,
     absl::Time time_last_changed) {
   absl::ReaderMutexLock l(&gnmi_event_lock_);
@@ -1053,7 +1054,7 @@ void TdiChassisManager::SendPortOperStateGnmiEvent(
   }
 }
 
-void* TdiChassisManager::PortStatusEventHandlerThreadFunc(void* arg) {
+void* TofinoChassisManager::PortStatusEventHandlerThreadFunc(void* arg) {
   CHECK(arg != nullptr);
   // Retrieve arguments.
   auto* args = reinterpret_cast<ReaderArgs<PortStatusEvent>*>(arg);
@@ -1065,7 +1066,7 @@ void* TdiChassisManager::PortStatusEventHandlerThreadFunc(void* arg) {
   return nullptr;
 }
 
-void TdiChassisManager::ReadPortStatusEvents(
+void TofinoChassisManager::ReadPortStatusEvents(
     const std::unique_ptr<ChannelReader<PortStatusEvent>>& reader) {
   PortStatusEvent event;
   do {
@@ -1090,7 +1091,7 @@ void TdiChassisManager::ReadPortStatusEvents(
   } while (true);
 }
 
-void TdiChassisManager::PortStatusEventHandler(int device, int port,
+void TofinoChassisManager::PortStatusEventHandler(int device, int port,
                                               PortState new_state,
                                               absl::Time time_last_changed) {
   absl::WriterMutexLock l(&chassis_lock);
@@ -1132,7 +1133,7 @@ void TdiChassisManager::PortStatusEventHandler(int device, int port,
             << ".";
 }
 
-void* TdiChassisManager::TransceiverEventHandlerThreadFunc(void* arg) {
+void* TofinoChassisManager::TransceiverEventHandlerThreadFunc(void* arg) {
   CHECK(arg != nullptr);
   // Retrieve arguments.
   auto* args = reinterpret_cast<ReaderArgs<TransceiverEvent>*>(arg);
@@ -1144,7 +1145,7 @@ void* TdiChassisManager::TransceiverEventHandlerThreadFunc(void* arg) {
   return nullptr;
 }
 
-void TdiChassisManager::ReadTransceiverEvents(
+void TofinoChassisManager::ReadTransceiverEvents(
     const std::unique_ptr<ChannelReader<TransceiverEvent>>& reader) {
   do {
     // Check switch shutdown.
@@ -1168,7 +1169,7 @@ void TdiChassisManager::ReadTransceiverEvents(
   } while (true);
 }
 
-void TdiChassisManager::TransceiverEventHandler(int slot, int port,
+void TofinoChassisManager::TransceiverEventHandler(int slot, int port,
                                                HwState new_state) {
   absl::WriterMutexLock l(&chassis_lock);
 
@@ -1227,7 +1228,7 @@ void TdiChassisManager::TransceiverEventHandler(int slot, int port,
   }
 }
 
-::util::Status TdiChassisManager::RegisterEventWriters() {
+::util::Status TofinoChassisManager::RegisterEventWriters() {
   if (initialized_) {
     return MAKE_ERROR(ERR_INTERNAL)
            << "RegisterEventWriters() can be called only before the class is "
@@ -1299,7 +1300,7 @@ void TdiChassisManager::TransceiverEventHandler(int slot, int port,
   return ::util::OkStatus();
 }
 
-::util::Status TdiChassisManager::UnregisterEventWriters() {
+::util::Status TofinoChassisManager::UnregisterEventWriters() {
   absl::WriterMutexLock l(&chassis_lock);
   ::util::Status status = ::util::OkStatus();
   // Unregister the linkscan and transceiver module event Writers.
@@ -1330,7 +1331,7 @@ void TdiChassisManager::TransceiverEventHandler(int slot, int port,
   return status;
 }
 
-::util::StatusOr<int> TdiChassisManager::GetUnitFromNodeId(
+::util::StatusOr<int> TofinoChassisManager::GetUnitFromNodeId(
     uint64 node_id) const {
   if (!initialized_) {
     return MAKE_ERROR(ERR_NOT_INITIALIZED) << "Not initialized!";
@@ -1342,7 +1343,7 @@ void TdiChassisManager::TransceiverEventHandler(int slot, int port,
   return *unit;
 }
 
-void TdiChassisManager::CleanupInternalState() {
+void TofinoChassisManager::CleanupInternalState() {
   unit_to_node_id_.clear();
   node_id_to_unit_.clear();
   node_id_to_port_id_to_port_state_.clear();
@@ -1355,7 +1356,7 @@ void TdiChassisManager::CleanupInternalState() {
   xcvr_port_key_to_xcvr_state_.clear();
 }
 
-::util::Status TdiChassisManager::Shutdown() {
+::util::Status TofinoChassisManager::Shutdown() {
   ::util::Status status = ::util::OkStatus();
   {
     absl::ReaderMutexLock l(&chassis_lock);

@@ -5,8 +5,8 @@
 # If systemd is installed,
 if command -v systemctl &> /dev/null; then
   # Stop and disable Stratum service
-  systemctl stop stratum_tdi.service
-  systemctl disable stratum_tdi.service
+  systemctl stop stratum_tofino.service
+  systemctl disable stratum_tofino.service
 fi
 
 # Remove files and dirs created by Stratum

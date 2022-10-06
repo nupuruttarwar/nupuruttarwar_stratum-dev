@@ -6,7 +6,7 @@
 // adapted from ipdk_switch_test, which was
 // adapted from bcm_switch_test
 
-#include "stratum/hal/lib/tdi/tdi_switch.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_switch.h"
 
 #include <utility>
 
@@ -19,9 +19,9 @@
 #include "stratum/hal/lib/common/phal_mock.h"
 #include "stratum/hal/lib/common/writer_mock.h"
 #include "stratum/hal/lib/p4/p4_table_mapper_mock.h"
-#include "stratum/hal/lib/tdi/tdi_chassis_manager_mock.h"
 #include "stratum/hal/lib/tdi/tdi_node_mock.h"
 #include "stratum/hal/lib/tdi/tdi_sde_mock.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_chassis_manager_mock.h"
 #include "stratum/lib/channel/channel_mock.h"
 #include "stratum/lib/utils.h"
 
@@ -72,16 +72,16 @@ const std::map<uint64, int>& NodeIdToUnitMap() {
   return *map;
 }
 
-class TdiSwitchTest : public ::testing::Test {
+class TofinoSwitchTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Use NiceMock to suppress "uninteresting mock function call" warnings
     phal_mock_ = absl::make_unique<NiceMock<PhalMock>>();
     sde_mock_ = absl::make_unique<NiceMock<TdiSdeMock>>();
-    chassis_manager_mock_ = absl::make_unique<NiceMock<TdiChassisManagerMock>>();
+    chassis_manager_mock_ = absl::make_unique<NiceMock<TofinoChassisManagerMock>>();
     node_mock_ = absl::make_unique<NiceMock<TdiNodeMock>>();
     unit_to_ipdk_node_mock_[kUnit] = node_mock_.get();
-    switch_ = TdiSwitch::CreateInstance(
+    switch_ = TofinoSwitch::CreateInstance(
         phal_mock_.get(),
         chassis_manager_mock_.get(),
         sde_mock_.get(),
@@ -114,17 +114,17 @@ class TdiSwitchTest : public ::testing::Test {
 
   std::unique_ptr<PhalMock> phal_mock_;
   std::unique_ptr<TdiSdeMock> sde_mock_;
-  std::unique_ptr<TdiChassisManagerMock> chassis_manager_mock_;
+  std::unique_ptr<TofinoChassisManagerMock> chassis_manager_mock_;
   std::unique_ptr<TdiNodeMock> node_mock_;
   std::map<int, TdiNode*> unit_to_ipdk_node_mock_;
-  std::unique_ptr<TdiSwitch> switch_;
+  std::unique_ptr<TofinoSwitch> switch_;
 };
 
-TEST_F(TdiSwitchTest, PushChassisConfigSucceeds) {
+TEST_F(TofinoSwitchTest, PushChassisConfigSucceeds) {
     PushChassisConfigSuccessfully();
 }
 
-TEST_F(TdiSwitchTest, PushChassisConfigFailsWhenNodePushFails) {
+TEST_F(TofinoSwitchTest, PushChassisConfigFailsWhenNodePushFails) {
   ChassisConfig config;
   config.add_nodes()->set_id(kNodeId);
   EXPECT_CALL(*node_mock_, PushChassisConfig(EqualsProto(config), kNodeId))
@@ -134,13 +134,13 @@ TEST_F(TdiSwitchTest, PushChassisConfigFailsWhenNodePushFails) {
               DerivedFromStatus(DefaultError()));
 }
 
-TEST_F(TdiSwitchTest, VerifyChassisConfigSucceeds) {
+TEST_F(TofinoSwitchTest, VerifyChassisConfigSucceeds) {
   ChassisConfig config;
   config.add_nodes()->set_id(kNodeId);
   EXPECT_OK(switch_->VerifyChassisConfig(config));
 }
 
-TEST_F(TdiSwitchTest, ShutdownSucceeds) {
+TEST_F(TofinoSwitchTest, ShutdownSucceeds) {
   EXPECT_CALL(*node_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*chassis_manager_mock_, Shutdown())
       .WillOnce(Return(::util::OkStatus()));
@@ -149,7 +149,7 @@ TEST_F(TdiSwitchTest, ShutdownSucceeds) {
   EXPECT_OK(switch_->Shutdown());
 }
 
-TEST_F(TdiSwitchTest, ShutdownFailsWhenSomeManagerShutdownFails) {
+TEST_F(TofinoSwitchTest, ShutdownFailsWhenSomeManagerShutdownFails) {
   EXPECT_CALL(*node_mock_, Shutdown()).WillOnce(Return(::util::OkStatus()));
   EXPECT_CALL(*chassis_manager_mock_, Shutdown())
       .WillOnce(Return(DefaultError()));
@@ -170,7 +170,7 @@ TEST_F(TdiSwitchTest, ShutdownFailsWhenSomeManagerShutdownFails) {
 //  Actual: generic::unknown:  (of type util::Status)
 //
 // PushForwardingPipelineConfig() should propagate the config.
-TEST_F(TdiSwitchTest, PushForwardingPipelineConfigSucceeds) {
+TEST_F(TofinoSwitchTest, PushForwardingPipelineConfigSucceeds) {
   PushChassisConfigSuccessfully();
 
   ::p4::v1::ForwardingPipelineConfig config;
@@ -181,9 +181,9 @@ TEST_F(TdiSwitchTest, PushForwardingPipelineConfigSucceeds) {
 }
 #endif
 
-// When TdiSwitchTest fails to push a forwarding config during
+// When TofinoSwitchTest fails to push a forwarding config during
 // PushForwardingPipelineConfig(), it should fail immediately.
-TEST_F(TdiSwitchTest, PushForwardingPipelineConfigFailsWhenPushFails) {
+TEST_F(TofinoSwitchTest, PushForwardingPipelineConfigFailsWhenPushFails) {
   PushChassisConfigSuccessfully();
 
   ::p4::v1::ForwardingPipelineConfig config;
@@ -194,7 +194,7 @@ TEST_F(TdiSwitchTest, PushForwardingPipelineConfigFailsWhenPushFails) {
               DerivedFromStatus(DefaultError()));
 }
 
-TEST_F(TdiSwitchTest, VerifyForwardingPipelineConfigSucceeds) {
+TEST_F(TofinoSwitchTest, VerifyForwardingPipelineConfigSucceeds) {
   PushChassisConfigSuccessfully();
 
   ::p4::v1::ForwardingPipelineConfig config;
@@ -206,7 +206,7 @@ TEST_F(TdiSwitchTest, VerifyForwardingPipelineConfigSucceeds) {
 }
 
 // Test registration of a writer for sending gNMI events.
-TEST_F(TdiSwitchTest, RegisterEventNotifyWriterTest) {
+TEST_F(TofinoSwitchTest, RegisterEventNotifyWriterTest) {
   auto writer = std::shared_ptr<WriterInterface<GnmiEventPtr>>(
       new WriterMock<GnmiEventPtr>());
 
@@ -214,9 +214,9 @@ TEST_F(TdiSwitchTest, RegisterEventNotifyWriterTest) {
       .WillOnce(Return(::util::OkStatus()))
       .WillOnce(Return(DefaultError()));
 
-  // Successful TdiChassisManager registration.
+  // Successful TofinoChassisManager registration.
   EXPECT_OK(switch_->RegisterEventNotifyWriter(writer));
-  // Failed TdiChassisManager registration.
+  // Failed TofinoChassisManager registration.
   EXPECT_THAT(switch_->RegisterEventNotifyWriter(writer),
               DerivedFromStatus(DefaultError()));
 }
@@ -238,7 +238,7 @@ void ExpectMockWriteDataResponse(WriterMock<DataResponse>* writer,
 
 #if 0
 // No GetPortState()
-TEST_F(TdiSwitchTest, GetPortOperStatus) {
+TEST_F(TofinoSwitchTest, GetPortOperStatus) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -274,7 +274,7 @@ TEST_F(TdiSwitchTest, GetPortOperStatus) {
 
 #if 0
 // No GetPortAdminState()
-TEST_F(TdiSwitchTest, GetPortAdminStatus) {
+TEST_F(TofinoSwitchTest, GetPortAdminStatus) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -310,7 +310,7 @@ TEST_F(TdiSwitchTest, GetPortAdminStatus) {
 
 #if 0
 // mac_address() not returned
-TEST_F(TdiSwitchTest, GetMacAddressPass) {
+TEST_F(TofinoSwitchTest, GetMacAddressPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -331,7 +331,7 @@ TEST_F(TdiSwitchTest, GetMacAddressPass) {
 
 #if 0
 // No BcmPort
-TEST_F(TdiSwitchTest, GetPortSpeed) {
+TEST_F(TofinoSwitchTest, GetPortSpeed) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -368,7 +368,7 @@ TEST_F(TdiSwitchTest, GetPortSpeed) {
 }
 #endif
 
-TEST_F(TdiSwitchTest, GetMemoryErrorAlarmStatePass) {
+TEST_F(TofinoSwitchTest, GetMemoryErrorAlarmStatePass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
 #if 0
@@ -394,7 +394,7 @@ TEST_F(TdiSwitchTest, GetMemoryErrorAlarmStatePass) {
 
 #if 0
 
-TEST_F(TdiSwitchTest, GetFlowProgrammingExceptionAlarmStatePass) {
+TEST_F(TofinoSwitchTest, GetFlowProgrammingExceptionAlarmStatePass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -411,7 +411,7 @@ TEST_F(TdiSwitchTest, GetFlowProgrammingExceptionAlarmStatePass) {
 }
 
 // Doesn't work
-TEST_F(TdiSwitchTest, GetHealthIndicatorPass) {
+TEST_F(TofinoSwitchTest, GetHealthIndicatorPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -430,7 +430,7 @@ TEST_F(TdiSwitchTest, GetHealthIndicatorPass) {
 }
 
 // Doesn't work
-TEST_F(TdiSwitchTest, GetForwardingViablePass) {
+TEST_F(TofinoSwitchTest, GetForwardingViablePass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -448,7 +448,7 @@ TEST_F(TdiSwitchTest, GetForwardingViablePass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 =
-TEST_F(TdiSwitchTest, GetQosQueueCountersPass) {
+TEST_F(TofinoSwitchTest, GetQosQueueCountersPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -467,7 +467,7 @@ TEST_F(TdiSwitchTest, GetQosQueueCountersPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, GetNodePacketIoDebugInfoPass) {
+TEST_F(TofinoSwitchTest, GetNodePacketIoDebugInfoPass) {
   WriterMock<DataResponse> writer;
   DataResponse resp;
   // Expect Write() call and store data in resp.
@@ -486,7 +486,7 @@ TEST_F(TdiSwitchTest, GetNodePacketIoDebugInfoPass) {
 
 #if 0
 // No GetPortLoopbackState()
-TEST_F(TdiSwitchTest, GetPortLoopbackStatus) {
+TEST_F(TofinoSwitchTest, GetPortLoopbackStatus) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -521,7 +521,7 @@ TEST_F(TdiSwitchTest, GetPortLoopbackStatus) {
 }
 #endif
 
-TEST_F(TdiSwitchTest, GetSdnPortId) {
+TEST_F(TofinoSwitchTest, GetSdnPortId) {
   PushChassisConfigSuccessfully();
 
   WriterMock<DataResponse> writer;
@@ -542,7 +542,7 @@ TEST_F(TdiSwitchTest, GetSdnPortId) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortAdminStatusPass) {
+TEST_F(TofinoSwitchTest, SetPortAdminStatusPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -558,7 +558,7 @@ TEST_F(TdiSwitchTest, SetPortAdminStatusPass) {
 
 #if 0
 // No SetPortLoopbackState()
-TEST_F(TdiSwitchTest, SetPortLoopbackStatusPass) {
+TEST_F(TofinoSwitchTest, SetPortLoopbackStatusPass) {
   EXPECT_CALL(*chassis_manager_mock_,
               SetPortLoopbackState(1, 2, LOOPBACK_STATE_MAC))
       .WillOnce(Return(::util::OkStatus()));
@@ -578,7 +578,7 @@ TEST_F(TdiSwitchTest, SetPortLoopbackStatusPass) {
 }
 #endif
 
-TEST_F(TdiSwitchTest, SetPortMacAddressPass) {
+TEST_F(TofinoSwitchTest, SetPortMacAddressPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -592,7 +592,7 @@ TEST_F(TdiSwitchTest, SetPortMacAddressPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortSpeedPass) {
+TEST_F(TofinoSwitchTest, SetPortSpeedPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -606,7 +606,7 @@ TEST_F(TdiSwitchTest, SetPortSpeedPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortLacpSystemIdMacPass) {
+TEST_F(TofinoSwitchTest, SetPortLacpSystemIdMacPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -620,7 +620,7 @@ TEST_F(TdiSwitchTest, SetPortLacpSystemIdMacPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortLacpSystemPriorityPass) {
+TEST_F(TofinoSwitchTest, SetPortLacpSystemPriorityPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -634,7 +634,7 @@ TEST_F(TdiSwitchTest, SetPortLacpSystemPriorityPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortHealthIndicatorPass) {
+TEST_F(TofinoSwitchTest, SetPortHealthIndicatorPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -648,7 +648,7 @@ TEST_F(TdiSwitchTest, SetPortHealthIndicatorPass) {
   EXPECT_THAT(details.at(0), ::util::OkStatus());
 }
 
-TEST_F(TdiSwitchTest, SetPortNoContentsPass) {
+TEST_F(TofinoSwitchTest, SetPortNoContentsPass) {
   SetRequest req;
   auto* request = req.add_requests()->mutable_port();
   request->set_node_id(1);
@@ -660,7 +660,7 @@ TEST_F(TdiSwitchTest, SetPortNoContentsPass) {
   EXPECT_THAT(details.at(0).ToString(), HasSubstr("Not supported yet"));
 }
 
-TEST_F(TdiSwitchTest, SetNoContentsPass) {
+TEST_F(TofinoSwitchTest, SetNoContentsPass) {
   SetRequest req;
   req.add_requests();
   std::vector<::util::Status> details;

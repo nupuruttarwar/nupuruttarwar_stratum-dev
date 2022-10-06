@@ -3,21 +3,21 @@
 // Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#include "stratum/hal/bin/tdi/tdi_main.h"
+#include "stratum/hal/bin/tdi/tofino/tofino_main.h"
 
 #include "gflags/gflags.h"
 #include "stratum/glue/init_google.h"
 #include "stratum/glue/logging.h"
 #include "stratum/hal/lib/phal/phal_sim.h"
 #include "stratum/hal/lib/tdi/tdi_action_profile_manager.h"
-#include "stratum/hal/lib/tdi/tdi_chassis_manager.h"
 #include "stratum/hal/lib/tdi/tdi_counter_manager.h"
-#include "stratum/hal/lib/tdi/tdi_hal.h"
 #include "stratum/hal/lib/tdi/tdi_node.h"
 #include "stratum/hal/lib/tdi/tdi_pre_manager.h"
 #include "stratum/hal/lib/tdi/tdi_sde_wrapper.h"
-#include "stratum/hal/lib/tdi/tdi_switch.h"
 #include "stratum/hal/lib/tdi/tdi_table_manager.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_chassis_manager.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_hal.h"
+#include "stratum/hal/lib/tdi/tofino/tofino_switch.h"
 #include "stratum/lib/security/auth_policy_checker.h"
 
 DEFINE_string(tdi_sde_install, "/usr",
@@ -32,7 +32,7 @@ namespace stratum {
 namespace hal {
 namespace tdi {
 
-::util::Status TdiMain(int argc, char* argv[]) {
+::util::Status TofinoMain(int argc, char* argv[]) {
   InitGoogle(argv[0], &argc, &argv, true);
   InitStratumLogging();
 
@@ -81,15 +81,15 @@ namespace tdi {
   };
 
   auto chassis_manager =
-      TdiChassisManager::CreateInstance(mode, phal, sde_wrapper);
+      TofinoChassisManager::CreateInstance(mode, phal, sde_wrapper);
 
-  auto tdi_switch = TdiSwitch::CreateInstance(
+  auto tdi_switch = TofinoSwitch::CreateInstance(
       phal, chassis_manager.get(), sde_wrapper, device_id_to_tdi_node);
 
   auto auth_policy_checker = AuthPolicyChecker::CreateInstance();
 
   // Create the 'Hal' class instance.
-  auto* hal = TdiHal::CreateSingleton(
+  auto* hal = TofinoHal::CreateSingleton(
       stratum::hal::OPERATION_MODE_STANDALONE, tdi_switch.get(),
       auth_policy_checker.get());
   CHECK_RETURN_IF_FALSE(hal) << "Failed to create the Stratum Hal instance.";
