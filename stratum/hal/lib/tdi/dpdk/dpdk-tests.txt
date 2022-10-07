@@ -1,3 +1,0 @@
-//stratum/hal/lib/tdi/dpdk:dpdk_chassis_manager_test
-//stratum/hal/lib/tdi/dpdk:dpdk_hal_test
-//stratum/hal/lib/tdi/dpdk:dpdk_switch_test
