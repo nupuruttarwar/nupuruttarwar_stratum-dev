@@ -1,28 +1,44 @@
 // Copyright 2020-present Open Networking Foundation
+// Copyright 2022 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef STRATUM_HAL_LIB_BAREFOOT_BFRT_SWITCH_H_
-#define STRATUM_HAL_LIB_BAREFOOT_BFRT_SWITCH_H_
+#ifndef STRATUM_HAL_LIB_IPDK_IPDK_SWITCH_H_
+#define STRATUM_HAL_LIB_IPDK_IPDK_SWITCH_H_
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/synchronization/mutex.h"
-#include "stratum/hal/lib/barefoot/bf_chassis_manager.h"
-#include "stratum/hal/lib/barefoot/bf_sde_interface.h"
-#include "stratum/hal/lib/barefoot/bfrt_node.h"
 #include "stratum/hal/lib/common/phal_interface.h"
 #include "stratum/hal/lib/common/switch_interface.h"
+#include "stratum/hal/lib/ipdk/ipdk_chassis_manager.h"
 
 namespace stratum {
 namespace hal {
 namespace barefoot {
 
-class BfrtSwitch : public SwitchInterface {
+class TdiSdeInterface;
+class IpdkNode;
+
+class PortParamInterface {
+public:
+    virtual ~PortParamInterface() {}
+
+    virtual bool PortParamAlreadySet(
+        uint64 node_id, uint32 port_id,
+        SetRequest::Request::Port::ValueCase value_case) = 0;
+
+    virtual ::util::Status SetPortParam(
+        uint64 node_id, uint32 port_id,
+        const SingletonPort& singleton_port,
+        SetRequest::Request::Port::ValueCase value_case) = 0;
+};
+
+class IpdkSwitch : virtual public SwitchInterface,
+                   virtual public PortParamInterface {
  public:
-  ~BfrtSwitch() override;
+  ~IpdkSwitch() override;
 
   // SwitchInterface public methods.
   ::util::Status PushChassisConfig(const ChassisConfig& config) override
@@ -74,74 +90,77 @@ class BfrtSwitch : public SwitchInterface {
       LOCKS_EXCLUDED(chassis_lock);
   ::util::StatusOr<std::vector<std::string>> VerifyState() override;
 
-  // Factory function for creating the instance of the class.
-  static std::unique_ptr<BfrtSwitch> CreateInstance(
-      PhalInterface* phal_interface, BfChassisManager* bf_chassis_manager,
-      BfSdeInterface* bf_sde_interface,
-      const absl::flat_hash_map<int, BfrtNode*>& device_id_to_bfrt_node);
+  // Determines whether the specified port configuration parameter has
+  // already been set. Once set, it may not be set again.
+  bool PortParamAlreadySet(
+      uint64 node_id, uint32 port_id,
+      SetRequest::Request::Port::ValueCase value_case) override;
 
-  // BfrtSwitch is neither copyable nor movable.
-  BfrtSwitch(const BfrtSwitch&) = delete;
-  BfrtSwitch& operator=(const BfrtSwitch&) = delete;
-  BfrtSwitch(BfrtSwitch&&) = delete;
-  BfrtSwitch& operator=(BfrtSwitch&&) = delete;
+  // Sets the value of a port configuration parameter.
+  // Once set, it may not be set again.
+  ::util::Status SetPortParam(
+      uint64 node_id, uint32 port_id,
+      const SingletonPort& singleton_port,
+      SetRequest::Request::Port::ValueCase value_case) override;
+
+  // Factory function for creating the instance of the class.
+  static std::unique_ptr<IpdkSwitch> CreateInstance(
+      PhalInterface* phal_interface,
+      IpdkChassisManager* chassis_manager,
+      TdiSdeInterface* sde_interface,
+      const std::map<int, IpdkNode*>& device_id_to_ipdk_node);
+
+  // IpdkSwitch is neither copyable nor movable.
+  IpdkSwitch(const IpdkSwitch&) = delete;
+  IpdkSwitch& operator=(const IpdkSwitch&) = delete;
+  IpdkSwitch(IpdkSwitch&&) = delete;
+  IpdkSwitch& operator=(IpdkSwitch&&) = delete;
 
  private:
   // Private constructor. Use CreateInstance() to create an instance of this
   // class.
-  BfrtSwitch(PhalInterface* phal_interface,
-             BfChassisManager* bf_chassis_manager,
-             BfSdeInterface* bf_sde_interface,
-             const absl::flat_hash_map<int, BfrtNode*>& device_id_to_bfrt_node);
+  IpdkSwitch(PhalInterface* phal_interface,
+             IpdkChassisManager* chassis_manager,
+             TdiSdeInterface* sde_interface,
+             const std::map<int, IpdkNode*>& device_id_to_ipdk_node);
 
-  // Internal version of VerifyForwardingPipelineConfig() which takes no locks.
-  ::util::Status DoVerifyForwardingPipelineConfig(
-      uint64 node_id, const ::p4::v1::ForwardingPipelineConfig& config)
-      SHARED_LOCKS_REQUIRED(chassis_lock);
-
-  // Internal version of VerifyChassisConfig() which takes no locks.
-  ::util::Status DoVerifyChassisConfig(const ChassisConfig& config)
-      SHARED_LOCKS_REQUIRED(chassis_lock);
-
-  // Helper to get BfrtNode pointer from device_id number or return error
+  // Helper to get IpdkNode pointer from device_id number or return error
   // indicating invalid device_id.
-  ::util::StatusOr<BfrtNode*> GetBfrtNodeFromDeviceId(int device_id) const;
+  ::util::StatusOr<IpdkNode*> GetIpdkNodeFromDeviceId(int device_id) const;
 
-  // Helper to get BfrtNode pointer from node id or return error indicating
+  // Helper to get IpdkNode pointer from node id or return error indicating
   // invalid/unknown/uninitialized node.
-  ::util::StatusOr<BfrtNode*> GetBfrtNodeFromNodeId(uint64 node_id) const;
+  ::util::StatusOr<IpdkNode*> GetIpdkNodeFromNodeId(uint64 node_id) const;
 
   // Pointer to a PhalInterface implementation. The pointer has been also
   // passed to a few managers for accessing HW. Note that there is only one
   // instance of this class per chassis.
   PhalInterface* phal_interface_;  // not owned by this class.
 
-  // Pointer to a BfSdeInterface implementation that wraps PD API calls.
-  BfSdeInterface* bf_sde_interface_;  // not owned by this class.
+  // Pointer to a TdiSdeInterface implementation that wraps TDI API calls.
+  TdiSdeInterface* sde_interface_;  // not owned by this class.
 
   // Per chassis Managers. Note that there is only one instance of this class
   // per chassis.
-  BfChassisManager* bf_chassis_manager_;  // not owned by the class.
+  IpdkChassisManager* chassis_manager_;  // not owned by the class.
 
   // Map from zero-based device_id number corresponding to a node/ASIC to a
-  // pointer to BfrtNode which contains all the per-node managers for that
+  // pointer to IpdkNode which contains all the per-node managers for that
   // node/ASIC. This map is initialized in the constructor and will not change
   // during the lifetime of the class.
-  // Pointers not owned.
   // TODO(max): Does this need to be protected by chassis_lock?
-  const absl::flat_hash_map<int, BfrtNode*> device_id_to_bfrt_node_;
+  const std::map<int, IpdkNode*> device_id_to_ipdk_node_;  // pointers not owned
 
-  // Map from the node ids to to a pointer to BfrtNode which contain all the
-  // per-node managers for that node/ASIC. Created everytime a config is
-  // pushed. At any point of time this map will contain a keys the ids of
-  // the nodes which had a successful config push.
-  // Pointers not owned.
+  // Map from the node ids to to a pointer to IpdkNode which contain all the
+  // per-node managers for that node/ASIC. Created whenever a config is pushed.
+  // At any point in time, this map will contain as keys the ids of the nodes
+  // that had a successful config push.
   // TODO(max): Does this need to be protected by chassis_lock?
-  absl::flat_hash_map<uint64, BfrtNode*> node_id_to_bfrt_node_;
+  std::map<uint64, IpdkNode*> node_id_to_ipdk_node_;  //  pointers not owned
 };
 
 }  // namespace barefoot
 }  // namespace hal
 }  // namespace stratum
 
-#endif  // STRATUM_HAL_LIB_BAREFOOT_BFRT_SWITCH_H_
+#endif  // STRATUM_HAL_LIB_IPDK_IPDK_SWITCH_H_

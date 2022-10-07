@@ -6,15 +6,19 @@
 #define STRATUM_HAL_LIB_PHAL_PHAL_SIM_H_
 
 #include <functional>
+#if 0
 #include <map>
+#endif
 #include <memory>
 #include <set>
 #include <utility>
 
 #include "absl/synchronization/mutex.h"
 #include "stratum/hal/lib/common/phal_interface.h"
+#if 0
 #include "stratum/hal/lib/phal/phal.pb.h"
 #include "stratum/hal/lib/phal/sfp_configurator.h"
+#endif
 
 namespace stratum {
 namespace hal {
@@ -82,11 +86,12 @@ class PhalSim : public PhalInterface {
   // the priority of the TransceiverEventWriter intances.
   std::multiset<TransceiverEventWriter, TransceiverEventWriterComp>
       transceiver_event_writers_ GUARDED_BY(config_lock_);
-
+#if 0
   // Map from std::pair<int, int> representing (slot, port) of singleton port
   // to the vector of sfp datasource id
   std::map<std::pair<int, int>, ::stratum::hal::phal::SfpConfigurator*>
       slot_port_to_configurator_;
+#endif
 
   // Determines if PHAL is fully initialized.
   bool initialized_ GUARDED_BY(config_lock_);

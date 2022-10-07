@@ -1,5 +1,6 @@
 // Copyright 2018 Google LLC
 // Copyright 2018-present Open Networking Foundation
+// Copyright 2021-2022 Intel Corporation.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "stratum/hal/lib/common/config_monitoring_service.h"
@@ -214,6 +215,7 @@ bool ContainsUniqueNames(const T& values) {
     res->mutable_path()->CopyFrom(path);
     res->set_op(::gnmi::UpdateResult_Operation::UpdateResult_Operation_DELETE);
   }
+
   for (const auto& replace : req->replace()) {
     const auto& path = replace.path();
     VLOG(1) << "SET(REPLACE): " << path.ShortDebugString();
@@ -228,6 +230,7 @@ bool ContainsUniqueNames(const T& values) {
     res->mutable_path()->CopyFrom(replace.path());
     res->set_op(::gnmi::UpdateResult_Operation::UpdateResult_Operation_REPLACE);
   }
+
   for (const auto& update : req->update()) {
     const auto& path = update.path();
     VLOG(1) << "SET(UPDATE): " << path.ShortDebugString();
@@ -265,10 +268,17 @@ bool ContainsUniqueNames(const T& values) {
                             status.error_message());
     }
 
+#ifndef P4OVS_CHANGES
+    // P4OVS_CHANGES:
+    // - Why is this code suppressed?
+    // - In what context(s) does this change apply?
+    // - Is this change temporary or permanent?
+    // - If temporary, what are the prerequisites for reverting it?
+
     // Save running_chassis_config_ after everything went OK.
     running_chassis_config_.reset(config.PassOwnership());
 
-    // Notify the gNMI GnmiPublisher that the config has changed.
+    // Notify GnmiPublisher that the config has changed.
     APPEND_STATUS_IF_ERROR(
         status, gnmi_publisher_.HandleChange(
                     ConfigHasBeenPushedEvent(*running_chassis_config_)));
@@ -278,6 +288,7 @@ bool ContainsUniqueNames(const T& values) {
       return ::grpc::Status(ToGrpcCode(status.CanonicalCode()),
                             status.error_message());
     }
+#endif
   }
 
   // Add data to SetResponse Object

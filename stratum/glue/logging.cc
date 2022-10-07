@@ -10,7 +10,10 @@
 
 #include "absl/time/time.h"
 #include "gflags/gflags.h"
+#if 0
+//TODO NUPUR - Revisit when enabling stamping
 #include "stratum/glue/stamping.h"
+#endif
 
 #ifdef STRATUM_ARCH_PPC
 
@@ -59,7 +62,7 @@ void InitStratumLogging() {
   if (FLAGS_logtostderr) {
     LogToStderr();
   }
-
+#if 0
   if (kBuildTimestamp > 0) {
     LOG(INFO)
         << "Stratum version: "
@@ -71,6 +74,7 @@ void InitStratumLogging() {
   } else {
     LOG(INFO) << "Stratum version: not stamped.";
   }
+#endif
 }
 
 LoggingConfig GetCurrentLogLevel() {
