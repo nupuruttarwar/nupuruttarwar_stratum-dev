@@ -8,7 +8,9 @@
 
 #include <memory>
 
+#include "absl/time/time.h"
 #include "gflags/gflags.h"
+#include "stratum/glue/stamping.h"
 
 #ifdef STRATUM_ARCH_PPC
 
@@ -56,6 +58,18 @@ void InitStratumLogging() {
   }
   if (FLAGS_logtostderr) {
     LogToStderr();
+  }
+
+  if (kBuildTimestamp > 0) {
+    LOG(INFO)
+        << "Stratum version: "
+        << kBuildScmRevision
+        // TODO(max): enable once CI does not modify the source tree anymore
+        // << " (" << kBuildScmStatus << ")"
+        << " built at " << absl::FromTimeT(kBuildTimestamp) << " on host "
+        << kBuildHost << " by user " << kBuildUser << ".";
+  } else {
+    LOG(INFO) << "Stratum version: not stamped.";
   }
 }
 
