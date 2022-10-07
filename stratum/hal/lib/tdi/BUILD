@@ -1,3 +1,5 @@
+# stratum/hal/lib/tdi/BUILD
+
 # Copyright 2018 Google LLC
 # Copyright 2018-present Open Networking Foundation
 # Copyright 2022 Intel Corporation
@@ -26,10 +28,6 @@ config_setting(
     },
 )
 
-dpdk_defines = [
-    "DPDK_TARGET",
-]
-
 config_setting(
     name = "tofino_target",
     define_values = {
@@ -37,15 +35,16 @@ config_setting(
     },
 )
 
-tofino_defines = [
-    "TOFINO_TARGET",
-]
-
 target_defines = select({
-#    ":dpdk_target": dpdk_defines,
-    ":tofino_target": tofino_defines,
-    # error if target not specified
+    ":dpdk_target": ["DPDK_TARGET"],
+    ":tofino_target": ["TOFINO_TARGET"],
 })
+
+target_sdk = select({
+    ":dpdk_target": ["@local_dpdk_bin//:dpdk_sde"],
+    ":tofino_target": ["@local_tofino_bin//:tofino_sde"],
+})
+
 
 stratum_cc_library(
     name = "tdi_sde_interface",
@@ -97,8 +96,7 @@ stratum_cc_library(
         "//stratum/lib/channel",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@local_tofino_bin//:tofino_sde",
-    ],
+    ] + target_sdk,
 )
 
 stratum_cc_library(
@@ -274,17 +272,16 @@ stratum_cc_library(
         "@com_github_p4lang_p4runtime//:p4info_cc_proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
-        "@local_tofino_bin//:tofino_sde",
-    ],
+    ] + target_sdk,
 )
 
 stratum_cc_library(
     name = "macros",
     hdrs = ["macros.h"],
+    defines = target_defines,
     deps = [
         "//stratum/lib:macros",
-        "@local_tofino_bin//:tofino_sde",
-    ],
+    ] + target_sdk,
 )
 
 stratum_cc_library(
