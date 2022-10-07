@@ -7,7 +7,10 @@
 
 #include "gflags/gflags.h"
 #include "stratum/glue/logging.h"
+#if 0
+//TODO Nupur - Revisit when enabling stamping
 #include "stratum/glue/stamping.h"
+#endif
 
 inline void InitGoogle(const char* usage, int* argc, char*** argv,
                        bool remove_flags) {
@@ -26,7 +29,10 @@ inline void InitGoogle(const char* usage, int* argc, char*** argv,
   CHECK(!::gflags::SetCommandLineOptionWithMode("minloglevel", "0",
                                                 ::gflags::SET_FLAGS_DEFAULT)
              .empty());
+#if 0
+//TODO Nupur - Revisit when enabling stamping
   ::gflags::SetVersionString(stratum::kBuildScmRevision);
+#endif
   ::gflags::ParseCommandLineFlags(argc, argv, remove_flags);
 }
 
